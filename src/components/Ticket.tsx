@@ -7,7 +7,8 @@ import {
   RefreshCw, 
   WashingMachine,
   CalendarDays,
-  Scissors
+  Scissors,
+  Copy
 } from 'lucide-react';
 import { generateTicketNumber } from '@/utils/generateTicketNumber';
 import { toast } from 'sonner';
@@ -35,13 +36,14 @@ const Ticket: React.FC<TicketProps> = ({ customer, onNewTicket }) => {
         const printWindow = window.open('', '', 'height=600,width=800');
         
         if (printWindow) {
-          printWindow.document.write('<html><head><title>Ticket de Lavandería</title>');
+          printWindow.document.write('<html><head><title>Tickets de Lavandería</title>');
           printWindow.document.write('<style>');
           printWindow.document.write(`
             body { font-family: 'Inter', sans-serif; margin: 0; padding: 20px; }
-            .ticket-container { max-width: 300px; margin: 0 auto; }
+            .ticket-container { max-width: 300px; margin: 0 auto; page-break-after: always; }
             .ticket-header { text-align: center; margin-bottom: 15px; }
             .ticket-logo { font-size: 24px; font-weight: bold; }
+            .ticket-copy { font-size: 14px; font-weight: bold; background-color: #f0f0f0; padding: 5px; border-radius: 4px; margin-bottom: 10px; text-align: center; }
             .ticket-content { border: 1px solid #ddd; border-radius: 8px; padding: 15px; }
             .ticket-row { display: flex; justify-content: space-between; margin: 8px 0; }
             .ticket-label { color: #666; }
@@ -52,7 +54,49 @@ const Ticket: React.FC<TicketProps> = ({ customer, onNewTicket }) => {
           `);
           printWindow.document.write('</style></head><body>');
           
+          // Print CLIENT COPY
           printWindow.document.write('<div class="ticket-container">');
+          printWindow.document.write('<div class="ticket-copy">COPIA CLIENTE</div>');
+          printWindow.document.write('<div class="ticket-header">');
+          printWindow.document.write('<div class="ticket-logo">Lavandería Express</div>');
+          printWindow.document.write(`<div>Fecha: ${formattedDate}</div>`);
+          printWindow.document.write('</div>');
+          
+          printWindow.document.write('<div class="ticket-content">');
+          printWindow.document.write('<div class="ticket-row">');
+          printWindow.document.write('<span class="ticket-label">Cliente:</span>');
+          printWindow.document.write(`<span class="ticket-value">${customer.name}</span>`);
+          printWindow.document.write('</div>');
+          
+          printWindow.document.write('<div class="ticket-row">');
+          printWindow.document.write('<span class="ticket-label">Teléfono:</span>');
+          printWindow.document.write(`<span class="ticket-value">${customer.phone}</span>`);
+          printWindow.document.write('</div>');
+          
+          printWindow.document.write('<div class="dashed-line"></div>');
+          
+          printWindow.document.write('<div class="ticket-row">');
+          printWindow.document.write('<span class="ticket-label">Cantidad de Valet:</span>');
+          printWindow.document.write(`<span class="ticket-value">${customer.valetQuantity}</span>`);
+          printWindow.document.write('</div>');
+          
+          printWindow.document.write('<div class="ticket-row ticket-total">');
+          printWindow.document.write('<span>Total:</span>');
+          printWindow.document.write(`<span>$${customer.total.toLocaleString()}</span>`);
+          printWindow.document.write('</div>');
+          
+          printWindow.document.write('</div>');
+          
+          printWindow.document.write('<div class="ticket-footer">');
+          printWindow.document.write(`<div>Ticket #${ticketNumber}</div>`);
+          printWindow.document.write('<div>¡Gracias por su preferencia!</div>');
+          printWindow.document.write('</div>');
+          
+          printWindow.document.write('</div>');
+          
+          // Print LAUNDRY COPY
+          printWindow.document.write('<div class="ticket-container">');
+          printWindow.document.write('<div class="ticket-copy">COPIA LAVANDERÍA</div>');
           printWindow.document.write('<div class="ticket-header">');
           printWindow.document.write('<div class="ticket-logo">Lavandería Express</div>');
           printWindow.document.write(`<div>Fecha: ${formattedDate}</div>`);
@@ -100,7 +144,7 @@ const Ticket: React.FC<TicketProps> = ({ customer, onNewTicket }) => {
             printWindow.close();
           }, 250);
           
-          toast.success('Imprimiendo ticket...');
+          toast.success('Imprimiendo tickets duplicados...');
         } else {
           toast.error('No se pudo abrir la ventana de impresión');
         }
@@ -126,9 +170,14 @@ const Ticket: React.FC<TicketProps> = ({ customer, onNewTicket }) => {
         ref={ticketRef}
       >
         <div className="p-6 pb-0">
-          <div className="flex justify-center items-center mb-3">
-            <WashingMachine className="h-5 w-5 text-laundry-600 mr-2" />
-            <h2 className="text-xl font-bold text-center">Lavandería Express</h2>
+          <div className="flex justify-between items-center mb-3">
+            <div className="flex items-center">
+              <WashingMachine className="h-5 w-5 text-laundry-600 mr-2" />
+              <h2 className="text-xl font-bold">Lavandería Express</h2>
+            </div>
+            <div className="text-xs px-2 py-1 bg-laundry-100 text-laundry-700 rounded font-medium">
+              CLIENTE
+            </div>
           </div>
           
           <div className="flex items-center justify-between text-sm text-muted-foreground mb-4">
@@ -200,8 +249,8 @@ const Ticket: React.FC<TicketProps> = ({ customer, onNewTicket }) => {
           onClick={handlePrint}
           className="flex items-center gap-2 bg-laundry-600 hover:bg-laundry-700 transition-all"
         >
-          <Printer className="h-4 w-4" />
-          Imprimir
+          <Copy className="h-4 w-4 mr-1" />
+          Imprimir Duplicado
         </Button>
       </div>
     </div>
