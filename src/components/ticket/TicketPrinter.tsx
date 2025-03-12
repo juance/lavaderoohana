@@ -1,5 +1,3 @@
-
-import React from 'react';
 import { toast } from 'sonner';
 
 interface LaundryOptions {
@@ -29,11 +27,11 @@ interface TicketPrinterProps {
   formattedDate: string;
 }
 
-const TicketPrinter: React.FC<TicketPrinterProps> = ({ 
+const useTicketPrinter = ({ 
   customer,
   ticketNumber,
   formattedDate
-}) => {
+}: TicketPrinterProps) => {
   const getPaymentMethodName = (method: PaymentMethod) => {
     switch (method) {
       case 'cash': return 'Efectivo';
@@ -260,4 +258,4 @@ const TicketPrinter: React.FC<TicketPrinterProps> = ({
   return { handlePrint };
 };
 
-export default TicketPrinter;
+export default useTicketPrinter;

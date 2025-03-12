@@ -1,4 +1,3 @@
-
 interface LaundryOptions {
   separateByColor: boolean;
   delicateDry: boolean;
@@ -53,7 +52,7 @@ export const storeExpense = (expense: Expense): void => {
   const expenses = getStoredExpenses();
   expenses.push({
     ...expense,
-    date: new Date().toISOString() // Store as ISO string for serialization
+    date: expense.date.toISOString() // Store as ISO string for serialization
   });
   localStorage.setItem('laundryExpenses', JSON.stringify(expenses));
 };

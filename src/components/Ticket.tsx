@@ -8,7 +8,7 @@ import TicketLaundryOptions from './ticket/TicketLaundryOptions';
 import TicketPaymentInfo from './ticket/TicketPaymentInfo';
 import TicketFooter from './ticket/TicketFooter';
 import TicketActions from './ticket/TicketActions';
-import TicketPrinter from './ticket/TicketPrinter';
+import useTicketPrinter from './ticket/TicketPrinter';
 
 interface LaundryOptions {
   separateByColor: boolean;
@@ -49,7 +49,7 @@ const Ticket: React.FC<TicketProps> = ({ customer, onNewTicket }) => {
     }).format(amount);
   };
 
-  const { handlePrint } = TicketPrinter({ 
+  const { handlePrint } = useTicketPrinter({ 
     customer, 
     ticketNumber, 
     formattedDate 
