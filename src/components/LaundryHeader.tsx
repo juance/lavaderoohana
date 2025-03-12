@@ -10,7 +10,7 @@ const LaundryHeader: React.FC = () => {
         <div className="absolute -inset-1 bg-blue-100 rounded-full -z-10 blur-sm animate-pulse"></div>
       </div>
       <h1 className="text-3xl md:text-4xl font-bold tracking-tight bg-gradient-to-r from-laundry-700 to-laundry-500 bg-clip-text text-transparent">
-        Lavandería Express
+        Lavandería Ohana
       </h1>
       <p className="text-muted-foreground mt-2 animate-fade-up" style={{ animationDelay: '100ms' }}>
         Sistema de Tickets

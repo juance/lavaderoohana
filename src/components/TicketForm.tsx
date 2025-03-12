@@ -4,22 +4,43 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { 
   User, 
   Phone, 
   ShoppingBag, 
   ArrowRight, 
   Plus, 
-  Minus 
+  Minus,
+  Banknote,
+  CreditCard,
+  Smartphone,
+  Landmark
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Ticket from './Ticket';
+import { storeTicketData } from '@/utils/dataStorage';
+
+interface LaundryOptions {
+  separateByColor: boolean;
+  delicateDry: boolean;
+  stainRemoval: boolean;
+  bleach: boolean;
+  noFragrance: boolean;
+  noDry: boolean;
+}
+
+type PaymentMethod = 'cash' | 'debit' | 'mercadopago' | 'cuentadni';
 
 interface Customer {
   name: string;
   phone: string;
   valetQuantity: number;
+  laundryOptions: LaundryOptions;
+  paymentMethod: PaymentMethod;
   total: number;
+  date: Date;
 }
 
 const VALET_PRICE = 5000;
@@ -30,6 +51,15 @@ const TicketForm: React.FC = () => {
   const [valetQuantity, setValetQuantity] = useState<number>(1);
   const [showTicket, setShowTicket] = useState<boolean>(false);
   const [customer, setCustomer] = useState<Customer | null>(null);
+  const [laundryOptions, setLaundryOptions] = useState<LaundryOptions>({
+    separateByColor: false,
+    delicateDry: false,
+    stainRemoval: false,
+    bleach: false,
+    noFragrance: false,
+    noDry: false
+  });
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/\D/g, '');
@@ -54,6 +84,22 @@ const TicketForm: React.FC = () => {
     setName('');
     setPhone('');
     setValetQuantity(1);
+    setLaundryOptions({
+      separateByColor: false,
+      delicateDry: false,
+      stainRemoval: false,
+      bleach: false,
+      noFragrance: false,
+      noDry: false
+    });
+    setPaymentMethod('cash');
+  };
+
+  const handleLaundryOptionChange = (option: keyof LaundryOptions) => {
+    setLaundryOptions(prev => ({
+      ...prev,
+      [option]: !prev[option]
+    }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -69,15 +115,23 @@ const TicketForm: React.FC = () => {
       return;
     }
 
+    const currentDate = new Date();
     const customerData: Customer = {
       name,
       phone,
       valetQuantity,
-      total: calculateTotal()
+      laundryOptions,
+      paymentMethod,
+      total: calculateTotal(),
+      date: currentDate
     };
 
     setCustomer(customerData);
     setShowTicket(true);
+    
+    // Store the customer data for metrics
+    storeTicketData(customerData);
+    
     toast.success('¡Ticket generado con éxito!');
   };
 
@@ -164,6 +218,116 @@ const TicketForm: React.FC = () => {
                     <Plus className="h-4 w-4" />
                   </Button>
                 </div>
+              </div>
+
+              <div className="space-y-3 bg-slate-50 p-4 rounded-lg">
+                <Label className="text-sm font-medium">Opciones de lavado:</Label>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex items-start space-x-2">
+                    <Checkbox 
+                      id="separateByColor" 
+                      checked={laundryOptions.separateByColor}
+                      onCheckedChange={() => handleLaundryOptionChange('separateByColor')}
+                    />
+                    <Label htmlFor="separateByColor" className="text-sm font-normal leading-tight">
+                      1. Separar por color
+                    </Label>
+                  </div>
+                  
+                  <div className="flex items-start space-x-2">
+                    <Checkbox 
+                      id="delicateDry" 
+                      checked={laundryOptions.delicateDry}
+                      onCheckedChange={() => handleLaundryOptionChange('delicateDry')}
+                    />
+                    <Label htmlFor="delicateDry" className="text-sm font-normal leading-tight">
+                      2. Secar en delicado
+                    </Label>
+                  </div>
+                  
+                  <div className="flex items-start space-x-2">
+                    <Checkbox 
+                      id="stainRemoval" 
+                      checked={laundryOptions.stainRemoval}
+                      onCheckedChange={() => handleLaundryOptionChange('stainRemoval')}
+                    />
+                    <Label htmlFor="stainRemoval" className="text-sm font-normal leading-tight">
+                      3. Desmanchar
+                    </Label>
+                  </div>
+                  
+                  <div className="flex items-start space-x-2">
+                    <Checkbox 
+                      id="bleach" 
+                      checked={laundryOptions.bleach}
+                      onCheckedChange={() => handleLaundryOptionChange('bleach')}
+                    />
+                    <Label htmlFor="bleach" className="text-sm font-normal leading-tight">
+                      4. Blanquear
+                    </Label>
+                  </div>
+                  
+                  <div className="flex items-start space-x-2">
+                    <Checkbox 
+                      id="noFragrance" 
+                      checked={laundryOptions.noFragrance}
+                      onCheckedChange={() => handleLaundryOptionChange('noFragrance')}
+                    />
+                    <Label htmlFor="noFragrance" className="text-sm font-normal leading-tight">
+                      5. Sin perfume
+                    </Label>
+                  </div>
+                  
+                  <div className="flex items-start space-x-2">
+                    <Checkbox 
+                      id="noDry" 
+                      checked={laundryOptions.noDry}
+                      onCheckedChange={() => handleLaundryOptionChange('noDry')}
+                    />
+                    <Label htmlFor="noDry" className="text-sm font-normal leading-tight">
+                      6. No secar
+                    </Label>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="space-y-3 bg-slate-50 p-4 rounded-lg">
+                <Label className="text-sm font-medium">Método de pago:</Label>
+                <RadioGroup value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as PaymentMethod)}>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="cash" id="cash" />
+                      <Label htmlFor="cash" className="flex items-center gap-1.5 text-sm font-normal">
+                        <Banknote className="h-3.5 w-3.5 text-green-600" />
+                        Efectivo
+                      </Label>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="debit" id="debit" />
+                      <Label htmlFor="debit" className="flex items-center gap-1.5 text-sm font-normal">
+                        <CreditCard className="h-3.5 w-3.5 text-blue-600" />
+                        Débito
+                      </Label>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="mercadopago" id="mercadopago" />
+                      <Label htmlFor="mercadopago" className="flex items-center gap-1.5 text-sm font-normal">
+                        <Smartphone className="h-3.5 w-3.5 text-blue-500" />
+                        Mercado Pago
+                      </Label>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="cuentadni" id="cuentadni" />
+                      <Label htmlFor="cuentadni" className="flex items-center gap-1.5 text-sm font-normal">
+                        <Landmark className="h-3.5 w-3.5 text-yellow-600" />
+                        Cuenta DNI
+                      </Label>
+                    </div>
+                  </div>
+                </RadioGroup>
               </div>
 
               <div className="bg-slate-50 p-3 rounded-lg">
