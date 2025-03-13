@@ -80,12 +80,13 @@ const Index: React.FC = () => {
                 
                 <div className="p-3 border border-blue-200 bg-blue-50 rounded-md">
                   <h4 className="font-medium text-blue-800">Transferencia</h4>
-                  <p className="text-sm text-blue-700">CVU: 0000003100059557654321</p>
-                  <p className="text-sm text-blue-700">Alias: lavanderia.ohana</p>
+                  <p className="text-sm text-blue-700">CVU: 0000003100042886402505</p>
+                  <p className="text-sm text-blue-700">Alias: camargo590</p>
                 </div>
                 
                 <div className="p-3 border border-purple-200 bg-purple-50 rounded-md">
                   <h4 className="font-medium text-purple-800">Mercado Pago</h4>
+                  <p className="text-sm text-purple-700">Alias: camargo590</p>
                   <p className="text-sm text-purple-700">Escanear código QR en el local.</p>
                 </div>
                 

@@ -34,9 +34,9 @@ const TicketPaymentInfo: React.FC<TicketPaymentInfoProps> = ({
   const getPaymentMethodName = (method: PaymentMethod) => {
     switch (method) {
       case 'cash': return 'Efectivo';
-      case 'debit': return 'Débito';
-      case 'mercadopago': return 'Mercado Pago';
-      case 'cuentadni': return 'Cuenta DNI';
+      case 'debit': return 'Débito FC';
+      case 'mercadopago': return 'Mercado Pago FC';
+      case 'cuentadni': return 'Cuenta DNI FC';
     }
   };
 
