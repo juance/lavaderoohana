@@ -1,3 +1,4 @@
+
 interface LaundryOptions {
   separateByColor: boolean;
   delicateDry: boolean;
@@ -9,6 +10,13 @@ interface LaundryOptions {
 
 type PaymentMethod = 'cash' | 'debit' | 'mercadopago' | 'cuentadni';
 
+interface DryCleaningItem {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+}
+
 interface Customer {
   name: string;
   phone: string;
@@ -17,6 +25,7 @@ interface Customer {
   paymentMethod: PaymentMethod;
   total: number;
   date: Date;
+  dryCleaningItems?: DryCleaningItem[];
 }
 
 interface Expense {
@@ -92,6 +101,7 @@ export const getDailyMetrics = (date: Date): {
   totalValets: number; 
   totalSales: number;
   paymentBreakdown: Record<PaymentMethod, number>;
+  dryCleaningItems: { name: string; quantity: number; sales: number }[];
 } => {
   const tickets = getStoredTickets();
   
@@ -119,7 +129,33 @@ export const getDailyMetrics = (date: Date): {
     paymentBreakdown[ticket.paymentMethod] += ticket.total;
   });
   
-  return { totalValets, totalSales, paymentBreakdown };
+  // Compile dry cleaning items
+  const dryCleaningMap = new Map<string, { quantity: number; sales: number }>();
+  
+  dailyTickets.forEach(ticket => {
+    if (ticket.dryCleaningItems && ticket.dryCleaningItems.length > 0) {
+      ticket.dryCleaningItems.forEach(item => {
+        const existing = dryCleaningMap.get(item.name);
+        if (existing) {
+          existing.quantity += item.quantity;
+          existing.sales += item.price * item.quantity;
+        } else {
+          dryCleaningMap.set(item.name, {
+            quantity: item.quantity,
+            sales: item.price * item.quantity
+          });
+        }
+      });
+    }
+  });
+  
+  const dryCleaningItems = Array.from(dryCleaningMap.entries()).map(([name, data]) => ({
+    name,
+    quantity: data.quantity,
+    sales: data.sales
+  }));
+  
+  return { totalValets, totalSales, paymentBreakdown, dryCleaningItems };
 };
 
 // Get weekly metrics (for the week containing the provided date)
@@ -128,6 +164,7 @@ export const getWeeklyMetrics = (date: Date): {
   totalSales: number;
   paymentBreakdown: Record<PaymentMethod, number>;
   dailyBreakdown: { date: Date; sales: number; valets: number }[];
+  dryCleaningItems: { name: string; quantity: number; sales: number }[];
 } => {
   const tickets = getStoredTickets();
   
@@ -186,7 +223,33 @@ export const getWeeklyMetrics = (date: Date): {
     });
   }
   
-  return { totalValets, totalSales, paymentBreakdown, dailyBreakdown };
+  // Compile dry cleaning items
+  const dryCleaningMap = new Map<string, { quantity: number; sales: number }>();
+  
+  weeklyTickets.forEach(ticket => {
+    if (ticket.dryCleaningItems && ticket.dryCleaningItems.length > 0) {
+      ticket.dryCleaningItems.forEach(item => {
+        const existing = dryCleaningMap.get(item.name);
+        if (existing) {
+          existing.quantity += item.quantity;
+          existing.sales += item.price * item.quantity;
+        } else {
+          dryCleaningMap.set(item.name, {
+            quantity: item.quantity,
+            sales: item.price * item.quantity
+          });
+        }
+      });
+    }
+  });
+  
+  const dryCleaningItems = Array.from(dryCleaningMap.entries()).map(([name, data]) => ({
+    name,
+    quantity: data.quantity,
+    sales: data.sales
+  }));
+  
+  return { totalValets, totalSales, paymentBreakdown, dailyBreakdown, dryCleaningItems };
 };
 
 // Get monthly metrics
@@ -195,6 +258,7 @@ export const getMonthlyMetrics = (date: Date): {
   totalSales: number;
   paymentBreakdown: Record<PaymentMethod, number>;
   weeklyBreakdown: { weekNumber: number; sales: number; valets: number }[];
+  dryCleaningItems: { name: string; quantity: number; sales: number }[];
 } => {
   const tickets = getStoredTickets();
   
@@ -262,5 +326,31 @@ export const getMonthlyMetrics = (date: Date): {
     });
   }
   
-  return { totalValets, totalSales, paymentBreakdown, weeklyBreakdown };
+  // Compile dry cleaning items
+  const dryCleaningMap = new Map<string, { quantity: number; sales: number }>();
+  
+  monthlyTickets.forEach(ticket => {
+    if (ticket.dryCleaningItems && ticket.dryCleaningItems.length > 0) {
+      ticket.dryCleaningItems.forEach(item => {
+        const existing = dryCleaningMap.get(item.name);
+        if (existing) {
+          existing.quantity += item.quantity;
+          existing.sales += item.price * item.quantity;
+        } else {
+          dryCleaningMap.set(item.name, {
+            quantity: item.quantity,
+            sales: item.price * item.quantity
+          });
+        }
+      });
+    }
+  });
+  
+  const dryCleaningItems = Array.from(dryCleaningMap.entries()).map(([name, data]) => ({
+    name,
+    quantity: data.quantity,
+    sales: data.sales
+  }));
+  
+  return { totalValets, totalSales, paymentBreakdown, weeklyBreakdown, dryCleaningItems };
 };

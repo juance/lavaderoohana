@@ -16,11 +16,28 @@ import {
   Banknote,
   CreditCard,
   Smartphone,
-  Landmark
+  Landmark,
+  ChevronDown,
+  ChevronUp,
+  Shirt,
+  X
 } from 'lucide-react';
 import { toast } from 'sonner';
 import Ticket from './Ticket';
 import { storeTicketData } from '@/utils/dataStorage';
+import { 
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { dryCleaningServices, DryCleaningService } from '@/utils/dryCleaningServices';
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface LaundryOptions {
   separateByColor: boolean;
@@ -33,6 +50,13 @@ interface LaundryOptions {
 
 type PaymentMethod = 'cash' | 'debit' | 'mercadopago' | 'cuentadni';
 
+interface DryCleaningItem {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+}
+
 interface Customer {
   name: string;
   phone: string;
@@ -41,6 +65,7 @@ interface Customer {
   paymentMethod: PaymentMethod;
   total: number;
   date: Date;
+  dryCleaningItems?: DryCleaningItem[];
 }
 
 const VALET_PRICE = 5000;
@@ -60,6 +85,11 @@ const TicketForm: React.FC = () => {
     noDry: false
   });
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
+  const [isDryCleaningOpen, setIsDryCleaningOpen] = useState<boolean>(false);
+  const [dryCleaningItems, setDryCleaningItems] = useState<DryCleaningItem[]>([]);
+  const [selectedService, setSelectedService] = useState<string>('');
+  const [dryCleaningQuantity, setDryCleaningQuantity] = useState<number>(1);
+  const [dryCleaningUnitValue, setDryCleaningUnitValue] = useState<number | null>(null);
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/\D/g, '');
@@ -76,8 +106,28 @@ const TicketForm: React.FC = () => {
     setValetQuantity(prev => prev + 1);
   };
 
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat('es-AR', {
+      style: 'currency',
+      currency: 'ARS',
+      minimumFractionDigits: 0
+    }).format(amount);
+  };
+
   const calculateTotal = () => {
-    return valetQuantity * VALET_PRICE;
+    // Calculate valet total
+    let total = valetQuantity * VALET_PRICE;
+    
+    // Add dry cleaning items total
+    if (dryCleaningItems.length > 0) {
+      const dryCleaningTotal = dryCleaningItems.reduce((sum, item) => {
+        return sum + (item.price * item.quantity);
+      }, 0);
+      
+      total += dryCleaningTotal;
+    }
+    
+    return total;
   };
 
   const resetForm = () => {
@@ -93,6 +143,11 @@ const TicketForm: React.FC = () => {
       noDry: false
     });
     setPaymentMethod('cash');
+    setDryCleaningItems([]);
+    setSelectedService('');
+    setDryCleaningQuantity(1);
+    setDryCleaningUnitValue(null);
+    setIsDryCleaningOpen(false);
   };
 
   const handleLaundryOptionChange = (option: keyof LaundryOptions) => {
@@ -100,6 +155,53 @@ const TicketForm: React.FC = () => {
       ...prev,
       [option]: !prev[option]
     }));
+  };
+
+  const handleServiceChange = (value: string) => {
+    setSelectedService(value);
+    
+    const service = dryCleaningServices.find(s => s.name === value);
+    if (service) {
+      // Set the default price based on the service
+      if (service.price.desde && service.priceType === 'range') {
+        // For range prices, default to the "desde" value
+        setDryCleaningUnitValue(service.price.desde);
+      } else {
+        // For other price types, use the "hasta" value
+        setDryCleaningUnitValue(service.price.hasta);
+      }
+    } else {
+      setDryCleaningUnitValue(null);
+    }
+    
+    setDryCleaningQuantity(1);
+  };
+
+  const addDryCleaningItem = () => {
+    if (!selectedService || !dryCleaningUnitValue) {
+      toast.error('Por favor, selecciona un servicio y establece un precio');
+      return;
+    }
+    
+    const newItem: DryCleaningItem = {
+      id: Date.now().toString(),
+      name: selectedService,
+      price: dryCleaningUnitValue,
+      quantity: dryCleaningQuantity
+    };
+    
+    setDryCleaningItems(prev => [...prev, newItem]);
+    
+    // Reset selection for next item
+    setSelectedService('');
+    setDryCleaningUnitValue(null);
+    setDryCleaningQuantity(1);
+    
+    toast.success('Servicio de tintorería agregado');
+  };
+
+  const removeDryCleaningItem = (id: string) => {
+    setDryCleaningItems(prev => prev.filter(item => item.id !== id));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -123,7 +225,8 @@ const TicketForm: React.FC = () => {
       laundryOptions,
       paymentMethod,
       total: calculateTotal(),
-      date: currentDate
+      date: currentDate,
+      dryCleaningItems: dryCleaningItems.length > 0 ? dryCleaningItems : undefined
     };
 
     setCustomer(customerData);
@@ -138,14 +241,6 @@ const TicketForm: React.FC = () => {
   const newTicket = () => {
     setShowTicket(false);
     resetForm();
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('es-AR', {
-      style: 'currency',
-      currency: 'ARS',
-      minimumFractionDigits: 0
-    }).format(amount);
   };
 
   return (
@@ -219,6 +314,140 @@ const TicketForm: React.FC = () => {
                   </Button>
                 </div>
               </div>
+
+              <Collapsible
+                open={isDryCleaningOpen}
+                onOpenChange={setIsDryCleaningOpen}
+                className="bg-slate-50 p-4 rounded-lg"
+              >
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium flex items-center gap-2">
+                    <Shirt className="h-4 w-4 text-laundry-500" />
+                    Servicios de Tintorería
+                  </Label>
+                  <CollapsibleTrigger asChild>
+                    <Button variant="ghost" size="sm" className="w-9 h-9 p-0">
+                      {isDryCleaningOpen ? (
+                        <ChevronUp className="h-4 w-4" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </CollapsibleTrigger>
+                </div>
+                
+                <CollapsibleContent className="space-y-4 mt-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="dryCleaningService" className="text-xs">Servicio</Label>
+                    <Select value={selectedService} onValueChange={handleServiceChange}>
+                      <SelectTrigger id="dryCleaningService">
+                        <SelectValue placeholder="Seleccionar servicio" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {dryCleaningServices.map((service) => (
+                          <SelectItem key={service.name} value={service.name}>
+                            {service.name} {service.price.desde ? 
+                              `(${formatCurrency(service.price.desde)} - ${formatCurrency(service.price.hasta)})` : 
+                              `(${formatCurrency(service.price.hasta)})`
+                            }
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="dryCleaningPrice" className="text-xs">Precio por unidad</Label>
+                      <Input
+                        id="dryCleaningPrice"
+                        type="number"
+                        value={dryCleaningUnitValue || ''}
+                        onChange={(e) => setDryCleaningUnitValue(parseInt(e.target.value) || 0)}
+                        placeholder="$0"
+                        className="text-center"
+                      />
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="dryCleaningQuantity" className="text-xs">Cantidad</Label>
+                      <div className="flex items-center">
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          size="icon" 
+                          onClick={() => setDryCleaningQuantity(prev => Math.max(1, prev - 1))}
+                          className="h-9 w-9 rounded-l-md rounded-r-none"
+                        >
+                          <Minus className="h-3 w-3" />
+                        </Button>
+                        <Input
+                          id="dryCleaningQuantity"
+                          type="number"
+                          value={dryCleaningQuantity}
+                          onChange={(e) => setDryCleaningQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                          className="text-center rounded-none border-l-0 border-r-0"
+                          min="1"
+                        />
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          size="icon" 
+                          onClick={() => setDryCleaningQuantity(prev => prev + 1)}
+                          className="h-9 w-9 rounded-r-md rounded-l-none"
+                        >
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <Button 
+                    type="button" 
+                    onClick={addDryCleaningItem}
+                    className="w-full"
+                    disabled={!selectedService || !dryCleaningUnitValue}
+                  >
+                    <Plus className="h-4 w-4 mr-2" /> Agregar a la lista
+                  </Button>
+                  
+                  {dryCleaningItems.length > 0 && (
+                    <div className="space-y-2 mt-3 border-t pt-3">
+                      <h3 className="text-sm font-medium">Servicios agregados:</h3>
+                      <div className="space-y-2">
+                        {dryCleaningItems.map((item) => (
+                          <div key={item.id} className="flex justify-between items-center bg-white p-2 rounded-md">
+                            <div>
+                              <span className="text-sm font-medium">{item.name}</span>
+                              <div className="text-xs text-gray-500">
+                                {item.quantity} x {formatCurrency(item.price)}
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-bold">
+                                {formatCurrency(item.price * item.quantity)}
+                              </span>
+                              <Button 
+                                type="button" 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-7 w-7 p-0 hover:bg-red-50 hover:text-red-600"
+                                onClick={() => removeDryCleaningItem(item.id)}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex justify-between pt-2 text-sm font-medium">
+                        <span>Subtotal tintorería:</span>
+                        <span>{formatCurrency(dryCleaningItems.reduce((sum, item) => sum + item.price * item.quantity, 0))}</span>
+                      </div>
+                    </div>
+                  )}
+                </CollapsibleContent>
+              </Collapsible>
 
               <div className="space-y-3 bg-slate-50 p-4 rounded-lg">
                 <Label className="text-sm font-medium">Opciones de lavado:</Label>
@@ -335,6 +564,16 @@ const TicketForm: React.FC = () => {
                   <span className="text-sm text-muted-foreground">Precio por Valet:</span>
                   <span className="font-medium">{formatCurrency(VALET_PRICE)}</span>
                 </div>
+                
+                {dryCleaningItems.length > 0 && (
+                  <div className="flex justify-between items-center mt-2">
+                    <span className="text-sm text-muted-foreground">Subtotal Tintorería:</span>
+                    <span className="font-medium">
+                      {formatCurrency(dryCleaningItems.reduce((sum, item) => sum + (item.price * item.quantity), 0))}
+                    </span>
+                  </div>
+                )}
+                
                 <div className="flex justify-between items-center mt-2">
                   <span className="text-sm font-medium">Total:</span>
                   <span className="text-lg font-bold text-laundry-700">{formatCurrency(calculateTotal())}</span>

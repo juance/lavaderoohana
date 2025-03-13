@@ -9,6 +9,7 @@ import TicketPaymentInfo from './ticket/TicketPaymentInfo';
 import TicketFooter from './ticket/TicketFooter';
 import TicketActions from './ticket/TicketActions';
 import useTicketPrinter from './ticket/TicketPrinter';
+import { shareTicketViaWhatsApp } from '@/utils/whatsAppSharing';
 
 interface LaundryOptions {
   separateByColor: boolean;
@@ -21,6 +22,12 @@ interface LaundryOptions {
 
 type PaymentMethod = 'cash' | 'debit' | 'mercadopago' | 'cuentadni';
 
+interface DryCleaningItem {
+  name: string;
+  price: number;
+  quantity: number;
+}
+
 interface TicketProps {
   customer: {
     name: string;
@@ -30,6 +37,7 @@ interface TicketProps {
     paymentMethod: PaymentMethod;
     total: number;
     date?: Date;
+    dryCleaningItems?: DryCleaningItem[];
   };
   onNewTicket: () => void;
 }
@@ -54,6 +62,71 @@ const Ticket: React.FC<TicketProps> = ({ customer, onNewTicket }) => {
     ticketNumber, 
     formattedDate 
   });
+  
+  const getPaymentMethodName = (method: PaymentMethod) => {
+    switch (method) {
+      case 'cash': return 'Efectivo';
+      case 'debit': return 'Débito';
+      case 'mercadopago': return 'Mercado Pago';
+      case 'cuentadni': return 'Cuenta DNI';
+      default: return method;
+    }
+  };
+  
+  const shareViaWhatsApp = () => {
+    // Generate list of items for the ticket
+    const items: string[] = [];
+    
+    if (customer.valetQuantity > 0) {
+      items.push(`${customer.valetQuantity} Valet: ${formatCurrency(customer.valetQuantity * 5000)}`);
+    }
+    
+    // Add dry cleaning items if present
+    if (customer.dryCleaningItems && customer.dryCleaningItems.length > 0) {
+      customer.dryCleaningItems.forEach(item => {
+        items.push(`${item.quantity} ${item.name}: ${formatCurrency(item.price * item.quantity)}`);
+      });
+    }
+    
+    // Add selected laundry options
+    const options: string[] = [];
+    if (customer.laundryOptions.separateByColor) options.push("Separar por color");
+    if (customer.laundryOptions.delicateDry) options.push("Secar en delicado");
+    if (customer.laundryOptions.stainRemoval) options.push("Desmanchar");
+    if (customer.laundryOptions.bleach) options.push("Blanquear");
+    if (customer.laundryOptions.noFragrance) options.push("Sin perfume");
+    if (customer.laundryOptions.noDry) options.push("No secar");
+    
+    if (options.length > 0) {
+      items.push(`Opciones: ${options.join(", ")}`);
+    }
+    
+    // First, send to the customer
+    if (customer.phone) {
+      shareTicketViaWhatsApp(customer.phone, {
+        customerName: customer.name,
+        customerPhone: customer.phone,
+        ticketNumber,
+        formattedDate,
+        items,
+        total: customer.total,
+        paymentMethod: getPaymentMethodName(customer.paymentMethod)
+      });
+    }
+    
+    // Then, send to the laundry's phone number
+    setTimeout(() => {
+      shareTicketViaWhatsApp("5491136424871", {
+        customerName: customer.name,
+        customerPhone: customer.phone,
+        ticketNumber,
+        formattedDate,
+        items,
+        total: customer.total,
+        paymentMethod: getPaymentMethodName(customer.paymentMethod)
+      });
+    }, 1000); // Wait 1 second between messages to avoid issues
+  };
 
   return (
     <div className="flex flex-col items-center">
@@ -79,6 +152,20 @@ const Ticket: React.FC<TicketProps> = ({ customer, onNewTicket }) => {
             
             <TicketLaundryOptions options={customer.laundryOptions} />
             
+            {customer.dryCleaningItems && customer.dryCleaningItems.length > 0 && (
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium">Servicios de Tintorería:</h3>
+                <div className="text-sm space-y-1">
+                  {customer.dryCleaningItems.map((item, index) => (
+                    <div key={index} className="flex justify-between">
+                      <span>{item.quantity} x {item.name}</span>
+                      <span className="font-medium">{formatCurrency(item.price * item.quantity)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
             <TicketPaymentInfo 
               paymentMethod={customer.paymentMethod}
               valetQuantity={customer.valetQuantity}
@@ -93,7 +180,8 @@ const Ticket: React.FC<TicketProps> = ({ customer, onNewTicket }) => {
       
       <TicketActions 
         onNewTicket={onNewTicket} 
-        onPrint={handlePrint} 
+        onPrint={handlePrint}
+        onShareWhatsApp={shareViaWhatsApp}
       />
     </div>
   );
