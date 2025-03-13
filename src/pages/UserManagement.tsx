@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { getCurrentUser, hasPermission, updateUserPermissions, addUser } from '@/utils/authService';
-import { User, Permission } from '@/utils/userTypes';
+import { User, Permission, UserRole, NewUserData } from '@/utils/userTypes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -15,11 +15,11 @@ import { Link } from 'react-router-dom';
 
 const UserManagement: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
-  const [newUser, setNewUser] = useState({
+  const [newUser, setNewUser] = useState<NewUserData>({
     username: '',
     password: '',
-    role: 'staff' as const,
-    permissions: [] as Permission[]
+    role: 'staff',
+    permissions: []
   });
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const { toast } = useToast();

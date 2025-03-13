@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -418,7 +417,7 @@ const MetricsPanel: React.FC = () => {
               <CardTitle className="text-md">Ventas por día</CardTitle>
             </CardHeader>
             <CardContent className="p-4 pt-0">
-              {chartData && <Line data={chartData} options={{ responsive: true, maintainAspectRatio: false, height: 200 }} />}
+              {chartData && <Line data={chartData} options={{ responsive: true, maintainAspectRatio: false }} />}
             </CardContent>
           </Card>
           
@@ -465,7 +464,7 @@ const MetricsPanel: React.FC = () => {
               <CardTitle className="text-md">Ventas por semana</CardTitle>
             </CardHeader>
             <CardContent className="p-4 pt-0">
-              {chartData && <Line data={chartData} options={{ responsive: true, maintainAspectRatio: false, height: 200 }} />}
+              {chartData && <Line data={chartData} options={{ responsive: true, maintainAspectRatio: false }} />}
             </CardContent>
           </Card>
           

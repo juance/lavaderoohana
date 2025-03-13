@@ -1,12 +1,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { Ticket } from '@/components/Ticket';
+import Ticket from '@/components/Ticket';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, Search, Calendar, FileText, Phone } from 'lucide-react';
 import LaundryHeader from '@/components/LaundryHeader';
-import { getTickets } from '@/utils/dataStorage';
+import { getStoredTickets } from '@/utils/dataStorage';
 import { hasPermission } from '@/utils/authService';
 import { Badge } from '@/components/ui/badge';
 
@@ -23,7 +23,7 @@ const PickupOrders: React.FC = () => {
   
   // Load tickets
   useEffect(() => {
-    const loadedTickets = getTickets();
+    const loadedTickets = getStoredTickets();
     setTickets(loadedTickets);
   }, []);
   
@@ -35,11 +35,11 @@ const PickupOrders: React.FC = () => {
     
     switch (searchType) {
       case 'ticketNumber':
-        return ticket.ticketNumber.toLowerCase().includes(searchLower);
+        return ticket.ticketNumber?.toLowerCase().includes(searchLower);
       case 'name':
-        return ticket.customerName.toLowerCase().includes(searchLower);
+        return ticket.name?.toLowerCase().includes(searchLower);
       case 'phone':
-        return ticket.customerPhone.toLowerCase().includes(searchLower);
+        return ticket.phone?.toLowerCase().includes(searchLower);
       default:
         return true;
     }
@@ -50,8 +50,8 @@ const PickupOrders: React.FC = () => {
     setSearchTerm('');
   };
   
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
+  const formatDate = (dateString: string | Date) => {
+    const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
     return new Intl.DateTimeFormat('es-AR', {
       day: '2-digit',
       month: '2-digit',
@@ -137,11 +137,11 @@ const PickupOrders: React.FC = () => {
             <div className="bg-gray-50 rounded-lg p-4 h-[500px] overflow-y-auto">
               {filteredTickets.length > 0 ? (
                 <div className="space-y-3">
-                  {filteredTickets.map((ticket) => (
+                  {filteredTickets.map((ticket, index) => (
                     <div
-                      key={ticket.id}
+                      key={index}
                       className={`p-3 border rounded-lg cursor-pointer transition-all ${
-                        selectedTicket?.id === ticket.id 
+                        selectedTicket === ticket 
                           ? 'border-laundry-500 bg-laundry-50' 
                           : 'border-gray-200 hover:bg-gray-100'
                       }`}
@@ -149,19 +149,23 @@ const PickupOrders: React.FC = () => {
                     >
                       <div className="flex justify-between items-start">
                         <div>
-                          <div className="font-medium">{ticket.customerName}</div>
-                          <div className="text-sm text-gray-500">{ticket.customerPhone}</div>
+                          <div className="font-medium">{ticket.name}</div>
+                          <div className="text-sm text-gray-500">{ticket.phone}</div>
                         </div>
                         <Badge className="bg-laundry-500">
-                          #{ticket.ticketNumber}
+                          #{ticket.ticketNumber || index + 1}
                         </Badge>
                       </div>
                       <div className="mt-2 flex justify-between text-sm">
                         <div>
-                          Fecha: {formatDate(ticket.dateCreated)}
+                          Fecha: {formatDate(ticket.date)}
                         </div>
                         <div className="font-semibold text-laundry-700">
-                          ${ticket.totalAmount}
+                          {new Intl.NumberFormat('es-AR', {
+                            style: 'currency',
+                            currency: 'ARS',
+                            minimumFractionDigits: 0
+                          }).format(ticket.total)}
                         </div>
                       </div>
                     </div>
@@ -178,7 +182,10 @@ const PickupOrders: React.FC = () => {
             {/* Ticket details */}
             <div className="bg-gray-50 rounded-lg p-4 h-[500px] overflow-y-auto">
               {selectedTicket ? (
-                <Ticket ticketData={selectedTicket} />
+                <Ticket 
+                  customer={selectedTicket}
+                  onNewTicket={() => setSelectedTicket(null)}
+                />
               ) : (
                 <div className="flex flex-col items-center justify-center h-full text-gray-500">
                   <FileText className="h-12 w-12 mb-2 text-gray-300" />

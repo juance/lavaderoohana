@@ -1,3 +1,4 @@
+
 interface LaundryOptions {
   separateByColor: boolean;
   delicateDry: boolean;
@@ -25,6 +26,7 @@ interface Customer {
   total: number;
   date: Date;
   dryCleaningItems?: DryCleaningItem[];
+  ticketNumber?: string;
 }
 
 interface Expense {

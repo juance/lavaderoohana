@@ -23,3 +23,10 @@ export type LoginCredentials = {
   username: string;
   password: string;
 };
+
+export type NewUserData = {
+  username: string;
+  password: string;
+  role: UserRole;
+  permissions: Permission[];
+};
