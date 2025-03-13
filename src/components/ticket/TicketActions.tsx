@@ -1,7 +1,8 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { FilePlus, Printer, Send } from 'lucide-react';
+import { FilePlus, Printer, Send, Package } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 interface TicketActionsProps {
   onNewTicket: () => void;
@@ -40,6 +41,15 @@ const TicketActions: React.FC<TicketActionsProps> = ({
       >
         <FilePlus className="mr-2 h-4 w-4" /> Nuevo Ticket
       </Button>
+
+      <Link to="/inventory" className="mt-2">
+        <Button 
+          variant="outline"
+          className="w-full border-laundry-200 text-laundry-600 hover:bg-laundry-50"
+        >
+          <Package className="mr-2 h-4 w-4" /> Gestionar Inventario
+        </Button>
+      </Link>
     </div>
   );
 };

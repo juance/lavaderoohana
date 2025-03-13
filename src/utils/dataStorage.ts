@@ -1,4 +1,3 @@
-
 interface LaundryOptions {
   separateByColor: boolean;
   delicateDry: boolean;
@@ -39,7 +38,7 @@ export const storeTicketData = (ticket: Customer): void => {
   const tickets = getStoredTickets();
   tickets.push({
     ...ticket,
-    date: new Date().toISOString() // Store as ISO string for serialization
+    date: ticket.date.toISOString() // Store as ISO string for serialization
   });
   localStorage.setItem('laundryTickets', JSON.stringify(tickets));
 };

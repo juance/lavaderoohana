@@ -4,7 +4,9 @@ import LaundryHeader from '@/components/LaundryHeader';
 import TicketForm from '@/components/TicketForm';
 import MetricsPanel from '@/components/MetricsPanel';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Ticket as TicketIcon, BarChart3 } from 'lucide-react';
+import { Ticket as TicketIcon, BarChart3, Package } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Link } from 'react-router-dom';
 
 const Index: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('tickets');
@@ -34,6 +36,15 @@ const Index: React.FC = () => {
             <MetricsPanel />
           </TabsContent>
         </Tabs>
+        
+        <div className="mt-6 flex justify-center">
+          <Link to="/inventory">
+            <Button className="flex items-center gap-2 bg-laundry-100 text-laundry-700 hover:bg-laundry-200">
+              <Package className="h-4 w-4" />
+              Gestionar Inventario
+            </Button>
+          </Link>
+        </div>
         
         <div className="mt-12 text-center">
           <p className="text-sm text-muted-foreground">
