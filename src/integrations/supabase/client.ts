@@ -10,3 +10,13 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 // import { supabase } from "@/integrations/supabase/client";
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+
+// Helper function to format a date as YYYY-MM-DD
+export const formatDateForSupabase = (date: Date): string => {
+  return date.toISOString();
+};
+
+// Helper function to parse a string date to a Date object
+export const parseSupabaseDate = (dateString: string): Date => {
+  return new Date(dateString);
+};
