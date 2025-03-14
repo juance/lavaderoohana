@@ -1,4 +1,3 @@
-
 interface LaundryOptions {
   separateByColor: boolean;
   delicateDry: boolean;
@@ -40,7 +39,7 @@ export const storeTicketData = (ticket: Customer): void => {
   const tickets = getStoredTickets();
   tickets.push({
     ...ticket,
-    date: ticket.date.toISOString() // Store as ISO string for serialization
+    date: ticket.date instanceof Date ? ticket.date.toISOString() : ticket.date // Convert Date to string for storage
   });
   localStorage.setItem('laundryTickets', JSON.stringify(tickets));
 };
@@ -53,7 +52,7 @@ export const getStoredTickets = (): Customer[] => {
   const tickets = JSON.parse(ticketsJson);
   return tickets.map((ticket: any) => ({
     ...ticket,
-    date: new Date(ticket.date) // Convert back to Date object
+    date: ticket.date ? new Date(ticket.date) : new Date() // Convert string back to Date
   }));
 };
 
@@ -62,7 +61,7 @@ export const storeExpense = (expense: Expense): void => {
   const expenses = getStoredExpenses();
   expenses.push({
     ...expense,
-    date: expense.date.toISOString() // Store as ISO string for serialization
+    date: expense.date instanceof Date ? expense.date.toISOString() : expense.date // Convert Date to string
   });
   localStorage.setItem('laundryExpenses', JSON.stringify(expenses));
 };
@@ -75,7 +74,7 @@ export const getStoredExpenses = (): Expense[] => {
   const expenses = JSON.parse(expensesJson);
   return expenses.map((expense: any) => ({
     ...expense,
-    date: new Date(expense.date) // Convert back to Date object
+    date: expense.date ? new Date(expense.date) : new Date() // Convert string back to Date
   }));
 };
 

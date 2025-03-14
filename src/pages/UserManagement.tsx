@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
-import { Navigate } from 'react-router-dom';
-import { getCurrentUser, hasPermission, updateUserPermissions, addUser } from '@/utils/authService';
+import { Navigate, useNavigate } from 'react-router-dom';
+import { getCurrentUser, hasPermission, updateUserPermissions, addUser, deleteUser, getAllUsers } from '@/utils/authService';
 import { User, Permission, UserRole, NewUserData } from '@/utils/userTypes';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -10,19 +10,21 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import LaundryHeader from '@/components/LaundryHeader';
-import { UserCog, UserPlus, ArrowLeft } from 'lucide-react';
+import { UserCog, UserPlus, ArrowLeft, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
 const UserManagement: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [newUser, setNewUser] = useState<NewUserData>({
     username: '',
     password: '',
-    role: 'staff',
+    role: 'staff' as UserRole,
     permissions: []
   });
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const { toast } = useToast();
+  const navigate = useNavigate();
   
   // If not admin, redirect to home
   if (!hasPermission('users.manage')) {
@@ -31,10 +33,7 @@ const UserManagement: React.FC = () => {
   
   // Get users from localStorage
   useEffect(() => {
-    const storedUsers = localStorage.getItem('laundry_users');
-    if (storedUsers) {
-      setUsers(JSON.parse(storedUsers));
-    }
+    setUsers(getAllUsers());
   }, []);
   
   const handleAddUser = (e: React.FormEvent) => {
@@ -55,13 +54,48 @@ const UserManagement: React.FC = () => {
       setNewUser({
         username: '',
         password: '',
-        role: 'staff',
+        role: 'staff' as UserRole,
         permissions: []
       });
     } catch (error) {
       toast({
         title: "Error",
         description: "No se pudo crear el usuario.",
+        variant: "destructive",
+      });
+    }
+  };
+  
+  const handleDeleteUser = (userId: string) => {
+    // Check if trying to delete admin1 (main admin)
+    if (userId === '1') {
+      toast({
+        title: "Error",
+        description: "No se puede eliminar al administrador principal.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const success = deleteUser(userId);
+    
+    if (success) {
+      // Update local state
+      setUsers(users.filter(user => user.id !== userId));
+      
+      // If the deleted user was selected, clear selection
+      if (selectedUser && selectedUser.id === userId) {
+        setSelectedUser(null);
+      }
+      
+      toast({
+        title: "Usuario eliminado",
+        description: "El usuario ha sido eliminado exitosamente.",
+      });
+    } else {
+      toast({
+        title: "Error",
+        description: "No se pudo eliminar el usuario.",
         variant: "destructive",
       });
     }
@@ -130,13 +164,48 @@ const UserManagement: React.FC = () => {
                     className={`p-4 border rounded-lg cursor-pointer transition-colors ${
                       selectedUser?.id === user.id ? 'border-laundry-500 bg-laundry-50' : 'border-gray-200 hover:bg-gray-50'
                     }`}
-                    onClick={() => setSelectedUser(user)}
                   >
                     <div className="flex items-center justify-between">
-                      <span className="font-medium">{user.username}</span>
-                      <Badge variant={user.role === 'admin' ? 'default' : 'secondary'}>
-                        {user.role === 'admin' ? 'Administrador' : 'Personal'}
-                      </Badge>
+                      <div className="flex-1" onClick={() => setSelectedUser(user)}>
+                        <span className="font-medium">{user.username}</span>
+                        <Badge className="ml-2" variant={user.role === 'admin' ? 'default' : 'secondary'}>
+                          {user.role === 'admin' ? 'Administrador' : 'Personal'}
+                        </Badge>
+                        {user.id === '1' && (
+                          <Badge variant="outline" className="ml-1">Principal</Badge>
+                        )}
+                      </div>
+                      
+                      {user.id !== '1' && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="icon"
+                              className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                            >
+                              <Trash2 className="h-5 w-5" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>¿Eliminar usuario?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Esta acción no se puede deshacer. Se eliminará permanentemente el usuario {user.username}.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                              <AlertDialogAction 
+                                onClick={() => handleDeleteUser(user.id)}
+                                className="bg-red-500 hover:bg-red-600"
+                              >
+                                Eliminar
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
                     </div>
                     <div className="mt-2 flex flex-wrap gap-1">
                       {user.permissions.slice(0, 3).map((perm) => (
@@ -225,7 +294,7 @@ const UserManagement: React.FC = () => {
                             id="role-admin"
                             value="admin"
                             checked={newUser.role === 'admin'}
-                            onChange={() => setNewUser({...newUser, role: 'admin'})}
+                            onChange={() => setNewUser({...newUser, role: 'admin' as UserRole})}
                           />
                           <Label htmlFor="role-admin">Administrador</Label>
                         </div>

@@ -4,12 +4,17 @@ import { Link, Navigate } from 'react-router-dom';
 import Ticket from '@/components/Ticket';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Search, Calendar, FileText, Phone, CreditCard } from 'lucide-react';
+import { ArrowLeft, Search, Calendar, FileText, Phone, CreditCard, Banknote, Smartphone, Landmark } from 'lucide-react';
 import LaundryHeader from '@/components/LaundryHeader';
 import { getStoredTickets } from '@/utils/dataStorage';
 import { hasPermission } from '@/utils/authService';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { toast } from 'sonner';
+
+// Define payment method type
+type PaymentMethod = 'cash' | 'debit' | 'mercadopago' | 'cuentadni';
 
 const PickupOrders: React.FC = () => {
   const [tickets, setTickets] = useState<any[]>([]);
@@ -17,6 +22,7 @@ const PickupOrders: React.FC = () => {
   const [selectedTicket, setSelectedTicket] = useState<any | null>(null);
   const [searchType, setSearchType] = useState<'ticketNumber' | 'name' | 'phone'>('ticketNumber');
   const [activeTab, setActiveTab] = useState<string>('orders');
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | null>(null);
   
   // Check if user has permission to view orders
   if (!hasPermission('orders.view')) {
@@ -28,6 +34,15 @@ const PickupOrders: React.FC = () => {
     const loadedTickets = getStoredTickets();
     setTickets(loadedTickets);
   }, []);
+  
+  // Reset payment method when a new ticket is selected
+  useEffect(() => {
+    if (selectedTicket) {
+      setSelectedPaymentMethod(selectedTicket.paymentMethod || null);
+    } else {
+      setSelectedPaymentMethod(null);
+    }
+  }, [selectedTicket]);
   
   // Filter tickets based on search
   const filteredTickets = tickets.filter((ticket) => {
@@ -59,6 +74,50 @@ const PickupOrders: React.FC = () => {
       month: '2-digit',
       year: 'numeric',
     }).format(date);
+  };
+  
+  const handlePaymentMethodChange = (value: PaymentMethod) => {
+    if (!selectedTicket) return;
+    
+    setSelectedPaymentMethod(value);
+    
+    // Create a new array with the updated ticket
+    const updatedTickets = tickets.map(ticket => {
+      if (ticket === selectedTicket) {
+        return { ...ticket, paymentMethod: value };
+      }
+      return ticket;
+    });
+    
+    // Update the selectedTicket reference
+    const updatedSelectedTicket = updatedTickets.find(ticket => ticket.name === selectedTicket.name && ticket.phone === selectedTicket.phone);
+    
+    // Update state
+    setTickets(updatedTickets);
+    setSelectedTicket(updatedSelectedTicket);
+    
+    // Save to localStorage
+    localStorage.setItem('laundryTickets', JSON.stringify(updatedTickets));
+    
+    toast.success(`Método de pago actualizado a ${getPaymentMethodName(value)}`);
+  };
+  
+  const getPaymentMethodIcon = (method: PaymentMethod) => {
+    switch (method) {
+      case 'cash': return <Banknote className="h-4 w-4 text-green-600" />;
+      case 'debit': return <CreditCard className="h-4 w-4 text-blue-600" />;
+      case 'mercadopago': return <Smartphone className="h-4 w-4 text-blue-500" />;
+      case 'cuentadni': return <Landmark className="h-4 w-4 text-yellow-600" />;
+    }
+  };
+  
+  const getPaymentMethodName = (method: PaymentMethod) => {
+    switch (method) {
+      case 'cash': return 'Efectivo';
+      case 'debit': return 'Débito FC';
+      case 'mercadopago': return 'Mercado Pago FC';
+      case 'cuentadni': return 'Cuenta DNI FC';
+    }
   };
   
   return (
@@ -194,13 +253,58 @@ const PickupOrders: React.FC = () => {
                   )}
                 </div>
                 
-                {/* Ticket details */}
+                {/* Ticket details and payment method selection */}
                 <div className="bg-gray-50 rounded-lg p-4 h-[500px] overflow-y-auto">
                   {selectedTicket ? (
-                    <Ticket 
-                      customer={selectedTicket}
-                      onNewTicket={() => setSelectedTicket(null)}
-                    />
+                    <div>
+                      <div className="mb-6">
+                        <h3 className="text-lg font-medium mb-3">Método de Pago</h3>
+                        <RadioGroup 
+                          value={selectedPaymentMethod || ''} 
+                          onValueChange={(value: PaymentMethod) => handlePaymentMethodChange(value)}
+                          className="grid grid-cols-2 gap-3"
+                        >
+                          <div className={`border rounded-lg p-3 ${selectedPaymentMethod === 'cash' ? 'border-green-500 bg-green-50' : 'border-gray-200'}`}>
+                            <RadioGroupItem value="cash" id="payment-cash" className="sr-only" />
+                            <label htmlFor="payment-cash" className="flex items-center gap-2 cursor-pointer">
+                              <Banknote className="h-5 w-5 text-green-600" />
+                              <span className="font-medium">Efectivo</span>
+                            </label>
+                          </div>
+                          
+                          <div className={`border rounded-lg p-3 ${selectedPaymentMethod === 'debit' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}>
+                            <RadioGroupItem value="debit" id="payment-debit" className="sr-only" />
+                            <label htmlFor="payment-debit" className="flex items-center gap-2 cursor-pointer">
+                              <CreditCard className="h-5 w-5 text-blue-600" />
+                              <span className="font-medium">Débito FC</span>
+                            </label>
+                          </div>
+                          
+                          <div className={`border rounded-lg p-3 ${selectedPaymentMethod === 'mercadopago' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}>
+                            <RadioGroupItem value="mercadopago" id="payment-mp" className="sr-only" />
+                            <label htmlFor="payment-mp" className="flex items-center gap-2 cursor-pointer">
+                              <Smartphone className="h-5 w-5 text-blue-500" />
+                              <span className="font-medium">Mercado Pago FC</span>
+                            </label>
+                          </div>
+                          
+                          <div className={`border rounded-lg p-3 ${selectedPaymentMethod === 'cuentadni' ? 'border-yellow-500 bg-yellow-50' : 'border-gray-200'}`}>
+                            <RadioGroupItem value="cuentadni" id="payment-cuentadni" className="sr-only" />
+                            <label htmlFor="payment-cuentadni" className="flex items-center gap-2 cursor-pointer">
+                              <Landmark className="h-5 w-5 text-yellow-600" />
+                              <span className="font-medium">Cuenta DNI FC</span>
+                            </label>
+                          </div>
+                        </RadioGroup>
+                      </div>
+                      
+                      <div className="mt-3">
+                        <Ticket 
+                          customer={selectedTicket}
+                          onNewTicket={() => setSelectedTicket(null)}
+                        />
+                      </div>
+                    </div>
                   ) : (
                     <div className="flex flex-col items-center justify-center h-full text-gray-500">
                       <FileText className="h-12 w-12 mb-2 text-gray-300" />

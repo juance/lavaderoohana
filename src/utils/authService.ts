@@ -118,3 +118,30 @@ export const updateUserPermissions = (userId: string, permissions: Permission[])
   
   return users[userIndex];
 };
+
+// Delete a user (admin only)
+export const deleteUser = (userId: string): boolean => {
+  // Prevent deleting admin1 (main admin)
+  if (userId === '1') return false;
+  
+  const users = getUsers();
+  const filteredUsers = users.filter(user => user.id !== userId);
+  
+  // If no users were removed, return false
+  if (filteredUsers.length === users.length) return false;
+  
+  saveUsers(filteredUsers);
+  
+  // If the deleted user is the current user, log out
+  const currentUser = getCurrentUser();
+  if (currentUser && currentUser.id === userId) {
+    logout();
+  }
+  
+  return true;
+};
+
+// Get all users (admin only)
+export const getAllUsers = (): User[] => {
+  return getUsers();
+};
