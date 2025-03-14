@@ -1,3 +1,4 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
 interface LaundryOptions {
@@ -120,7 +121,7 @@ export const storeTicketData = async (ticket: Customer): Promise<void> => {
   } catch (error) {
     console.error('Error storing ticket data:', error);
     // Fallback to localStorage if Supabase fails
-    const tickets = getStoredTicketsFromLocalStorage();
+    const tickets = await getStoredTicketsFromLocalStorage();
     tickets.push({
       ...ticket,
       date: ticket.date instanceof Date ? ticket.date.toISOString() : ticket.date // Convert Date to string for storage
@@ -206,7 +207,7 @@ export const getStoredTickets = async (): Promise<Customer[]> => {
 };
 
 // Helper function to get tickets from localStorage (fallback)
-const getStoredTicketsFromLocalStorage = (): Customer[] => {
+const getStoredTicketsFromLocalStorage = async (): Promise<Customer[]> => {
   const ticketsJson = localStorage.getItem('laundryTickets');
   if (!ticketsJson) return [];
   
@@ -230,7 +231,7 @@ export const storeExpense = async (expense: Expense): Promise<void> => {
   } catch (error) {
     console.error('Error storing expense data:', error);
     // Fallback to localStorage
-    const expenses = getStoredExpensesFromLocalStorage();
+    const expenses = await getStoredExpensesFromLocalStorage();
     expenses.push({
       ...expense,
       date: expense.date instanceof Date ? expense.date.toISOString() : expense.date
@@ -251,7 +252,7 @@ export const getStoredExpenses = async (): Promise<Expense[]> => {
     
     return expenses.map(expense => ({
       description: expense.description,
-      amount: parseFloat(expense.amount),
+      amount: parseFloat(expense.amount.toString()),
       date: new Date(expense.date)
     }));
   } catch (error) {
@@ -262,7 +263,7 @@ export const getStoredExpenses = async (): Promise<Expense[]> => {
 };
 
 // Helper function to get expenses from localStorage (fallback)
-const getStoredExpensesFromLocalStorage = (): Expense[] => {
+const getStoredExpensesFromLocalStorage = async (): Promise<Expense[]> => {
   const expensesJson = localStorage.getItem('laundryExpenses');
   if (!expensesJson) return [];
   
@@ -316,7 +317,7 @@ export const getClientVisitFrequency = async (phone: string): Promise<{ lastVisi
   } catch (error) {
     console.error('Error fetching client visit frequency:', error);
     // Fallback to localStorage
-    const tickets = getStoredTicketsFromLocalStorage();
+    const tickets = await getStoredTicketsFromLocalStorage();
     const clientTickets = tickets.filter(ticket => ticket.phone === phone);
     
     if (clientTickets.length === 0) {
@@ -438,7 +439,9 @@ export const getDailyMetrics = async (date: Date): Promise<{
     };
     
     dailyTickets.forEach(ticket => {
-      paymentBreakdown[ticket.paymentMethod] += ticket.total;
+      if (ticket.paymentMethod) {
+        paymentBreakdown[ticket.paymentMethod] += ticket.total;
+      }
     });
     
     // Compile dry cleaning items
@@ -472,198 +475,427 @@ export const getDailyMetrics = async (date: Date): Promise<{
 };
 
 // Get weekly metrics (for the week containing the provided date)
-export const getWeeklyMetrics = (date: Date): { 
+export const getWeeklyMetrics = async (date: Date): Promise<{ 
   totalValets: number; 
   totalSales: number;
   paymentBreakdown: Record<PaymentMethod, number>;
   dailyBreakdown: { date: Date; sales: number; valets: number }[];
   dryCleaningItems: { name: string; quantity: number; sales: number }[];
-} => {
-  const tickets = getStoredTickets();
-  
-  // Get the start and end of the week
-  const startOfWeek = new Date(date);
-  startOfWeek.setDate(date.getDate() - date.getDay()); // Start of week (Sunday)
-  startOfWeek.setHours(0, 0, 0, 0);
-  
-  const endOfWeek = new Date(startOfWeek);
-  endOfWeek.setDate(startOfWeek.getDate() + 6); // End of week (Saturday)
-  endOfWeek.setHours(23, 59, 59, 999);
-  
-  // Filter tickets for the week
-  const weeklyTickets = tickets.filter(ticket => {
-    const ticketDate = new Date(ticket.date);
-    return ticketDate >= startOfWeek && ticketDate <= endOfWeek;
-  });
-  
-  // Calculate metrics
-  const totalValets = weeklyTickets.reduce((sum, ticket) => sum + ticket.valetQuantity, 0);
-  const totalSales = weeklyTickets.reduce((sum, ticket) => sum + ticket.total, 0);
-  
-  // Calculate payment breakdown
-  const paymentBreakdown: Record<PaymentMethod, number> = {
-    cash: 0,
-    debit: 0,
-    mercadopago: 0,
-    cuentadni: 0
-  };
-  
-  weeklyTickets.forEach(ticket => {
-    paymentBreakdown[ticket.paymentMethod] += ticket.total;
-  });
-  
-  // Calculate daily breakdown
-  const dailyBreakdown: { date: Date; sales: number; valets: number }[] = [];
-  
-  for (let i = 0; i < 7; i++) {
-    const currentDate = new Date(startOfWeek);
-    currentDate.setDate(startOfWeek.getDate() + i);
+}> => {
+  try {
+    // Get the start and end of the week
+    const startOfWeek = new Date(date);
+    startOfWeek.setDate(date.getDate() - date.getDay()); // Start of week (Sunday)
+    startOfWeek.setHours(0, 0, 0, 0);
     
-    const dayTickets = weeklyTickets.filter(ticket => {
-      const ticketDate = new Date(ticket.date);
-      return ticketDate.getDate() === currentDate.getDate() && 
-             ticketDate.getMonth() === currentDate.getMonth() && 
-             ticketDate.getFullYear() === currentDate.getFullYear();
-    });
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6); // End of week (Saturday)
+    endOfWeek.setHours(23, 59, 59, 999);
     
-    const daySales = dayTickets.reduce((sum, ticket) => sum + ticket.total, 0);
-    const dayValets = dayTickets.reduce((sum, ticket) => sum + ticket.valetQuantity, 0);
+    // Get metrics
+    const { data: metricsData, error: metricsError } = await supabase
+      .rpc('get_metrics', {
+        start_date: startOfWeek.toISOString(),
+        end_date: endOfWeek.toISOString()
+      });
     
-    dailyBreakdown.push({
-      date: currentDate,
-      sales: daySales,
-      valets: dayValets
-    });
-  }
-  
-  // Compile dry cleaning items
-  const dryCleaningMap = new Map<string, { quantity: number; sales: number }>();
-  
-  weeklyTickets.forEach(ticket => {
-    if (ticket.dryCleaningItems && ticket.dryCleaningItems.length > 0) {
-      ticket.dryCleaningItems.forEach(item => {
-        const existing = dryCleaningMap.get(item.name);
-        if (existing) {
-          existing.quantity += item.quantity;
-          existing.sales += item.price * item.quantity;
-        } else {
-          dryCleaningMap.set(item.name, {
-            quantity: item.quantity,
-            sales: item.price * item.quantity
-          });
-        }
+    if (metricsError) throw metricsError;
+    
+    const metrics = metricsData[0];
+    
+    // Get all tickets for the week
+    const { data: weekTickets, error: ticketsError } = await supabase
+      .from('tickets')
+      .select(`
+        id,
+        date,
+        total,
+        valet_quantity,
+        dry_cleaning_items (
+          name,
+          price,
+          quantity
+        )
+      `)
+      .gte('date', startOfWeek.toISOString())
+      .lte('date', endOfWeek.toISOString())
+      .order('date', { ascending: true });
+    
+    if (ticketsError) throw ticketsError;
+    
+    // Calculate daily breakdown
+    const dailyMap = new Map<string, { date: Date; sales: number; valets: number }>();
+    
+    // Initialize all days of the week
+    for (let i = 0; i < 7; i++) {
+      const currentDate = new Date(startOfWeek);
+      currentDate.setDate(startOfWeek.getDate() + i);
+      const dateKey = currentDate.toISOString().split('T')[0];
+      dailyMap.set(dateKey, {
+        date: new Date(currentDate),
+        sales: 0,
+        valets: 0
       });
     }
-  });
-  
-  const dryCleaningItems = Array.from(dryCleaningMap.entries()).map(([name, data]) => ({
-    name,
-    quantity: data.quantity,
-    sales: data.sales
-  }));
-  
-  return { totalValets, totalSales, paymentBreakdown, dailyBreakdown, dryCleaningItems };
+    
+    // Fill in data from tickets
+    weekTickets.forEach(ticket => {
+      const ticketDate = new Date(ticket.date);
+      const dateKey = ticketDate.toISOString().split('T')[0];
+      
+      const dayData = dailyMap.get(dateKey);
+      if (dayData) {
+        dayData.sales += parseFloat(ticket.total);
+        dayData.valets += ticket.valet_quantity;
+      }
+    });
+    
+    // Compile dry cleaning items
+    const dryCleaningMap = new Map<string, { quantity: number; sales: number }>();
+    
+    weekTickets.forEach(ticket => {
+      if (ticket.dry_cleaning_items && ticket.dry_cleaning_items.length > 0) {
+        ticket.dry_cleaning_items.forEach((item: any) => {
+          const existing = dryCleaningMap.get(item.name);
+          if (existing) {
+            existing.quantity += item.quantity;
+            existing.sales += parseFloat(item.price) * item.quantity;
+          } else {
+            dryCleaningMap.set(item.name, {
+              quantity: item.quantity,
+              sales: parseFloat(item.price) * item.quantity
+            });
+          }
+        });
+      }
+    });
+    
+    const dryCleaningItems = Array.from(dryCleaningMap.entries()).map(([name, data]) => ({
+      name,
+      quantity: data.quantity,
+      sales: data.sales
+    }));
+    
+    return { 
+      totalValets: Number(metrics.total_valets) || 0, 
+      totalSales: Number(metrics.total_sales) || 0,
+      paymentBreakdown: {
+        cash: Number(metrics.cash_payments) || 0,
+        debit: Number(metrics.debit_payments) || 0,
+        mercadopago: Number(metrics.mercadopago_payments) || 0,
+        cuentadni: Number(metrics.cuentadni_payments) || 0
+      },
+      dailyBreakdown: Array.from(dailyMap.values()),
+      dryCleaningItems
+    };
+  } catch (error) {
+    console.error('Error fetching weekly metrics from Supabase:', error);
+    // Fallback to localStorage
+    const tickets = await getStoredTickets();
+    
+    // Get the start and end of the week
+    const startOfWeek = new Date(date);
+    startOfWeek.setDate(date.getDate() - date.getDay()); // Start of week (Sunday)
+    startOfWeek.setHours(0, 0, 0, 0);
+    
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6); // End of week (Saturday)
+    endOfWeek.setHours(23, 59, 59, 999);
+    
+    // Filter tickets for the week
+    const weeklyTickets = tickets.filter(ticket => {
+      const ticketDate = new Date(ticket.date);
+      return ticketDate >= startOfWeek && ticketDate <= endOfWeek;
+    });
+    
+    // Calculate metrics
+    const totalValets = weeklyTickets.reduce((sum, ticket) => sum + ticket.valetQuantity, 0);
+    const totalSales = weeklyTickets.reduce((sum, ticket) => sum + ticket.total, 0);
+    
+    // Calculate payment breakdown
+    const paymentBreakdown: Record<PaymentMethod, number> = {
+      cash: 0,
+      debit: 0,
+      mercadopago: 0,
+      cuentadni: 0
+    };
+    
+    weeklyTickets.forEach(ticket => {
+      if (ticket.paymentMethod) {
+        paymentBreakdown[ticket.paymentMethod] += ticket.total;
+      }
+    });
+    
+    // Calculate daily breakdown
+    const dailyBreakdown: { date: Date; sales: number; valets: number }[] = [];
+    
+    for (let i = 0; i < 7; i++) {
+      const currentDate = new Date(startOfWeek);
+      currentDate.setDate(startOfWeek.getDate() + i);
+      
+      const dayTickets = weeklyTickets.filter(ticket => {
+        const ticketDate = new Date(ticket.date);
+        return ticketDate.getDate() === currentDate.getDate() && 
+               ticketDate.getMonth() === currentDate.getMonth() && 
+               ticketDate.getFullYear() === currentDate.getFullYear();
+      });
+      
+      const daySales = dayTickets.reduce((sum, ticket) => sum + ticket.total, 0);
+      const dayValets = dayTickets.reduce((sum, ticket) => sum + ticket.valetQuantity, 0);
+      
+      dailyBreakdown.push({
+        date: currentDate,
+        sales: daySales,
+        valets: dayValets
+      });
+    }
+    
+    // Compile dry cleaning items
+    const dryCleaningMap = new Map<string, { quantity: number; sales: number }>();
+    
+    weeklyTickets.forEach(ticket => {
+      if (ticket.dryCleaningItems && ticket.dryCleaningItems.length > 0) {
+        ticket.dryCleaningItems.forEach(item => {
+          const existing = dryCleaningMap.get(item.name);
+          if (existing) {
+            existing.quantity += item.quantity;
+            existing.sales += item.price * item.quantity;
+          } else {
+            dryCleaningMap.set(item.name, {
+              quantity: item.quantity,
+              sales: item.price * item.quantity
+            });
+          }
+        });
+      }
+    });
+    
+    const dryCleaningItems = Array.from(dryCleaningMap.entries()).map(([name, data]) => ({
+      name,
+      quantity: data.quantity,
+      sales: data.sales
+    }));
+    
+    return { totalValets, totalSales, paymentBreakdown, dailyBreakdown, dryCleaningItems };
+  }
 };
 
 // Get monthly metrics
-export const getMonthlyMetrics = (date: Date): { 
+export const getMonthlyMetrics = async (date: Date): Promise<{ 
   totalValets: number; 
   totalSales: number;
   paymentBreakdown: Record<PaymentMethod, number>;
   weeklyBreakdown: { weekNumber: number; sales: number; valets: number }[];
   dryCleaningItems: { name: string; quantity: number; sales: number }[];
-} => {
-  const tickets = getStoredTickets();
-  
-  // Get the start and end of the month
-  const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
-  const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999);
-  
-  // Filter tickets for the month
-  const monthlyTickets = tickets.filter(ticket => {
-    const ticketDate = new Date(ticket.date);
-    return ticketDate >= startOfMonth && ticketDate <= endOfMonth;
-  });
-  
-  // Calculate metrics
-  const totalValets = monthlyTickets.reduce((sum, ticket) => sum + ticket.valetQuantity, 0);
-  const totalSales = monthlyTickets.reduce((sum, ticket) => sum + ticket.total, 0);
-  
-  // Calculate payment breakdown
-  const paymentBreakdown: Record<PaymentMethod, number> = {
-    cash: 0,
-    debit: 0,
-    mercadopago: 0,
-    cuentadni: 0
-  };
-  
-  monthlyTickets.forEach(ticket => {
-    paymentBreakdown[ticket.paymentMethod] += ticket.total;
-  });
-  
-  // Calculate weekly breakdown (4-5 weeks per month)
-  const weeklyBreakdown: { weekNumber: number; sales: number; valets: number }[] = [];
-  
-  // Get number of weeks in the month
-  const firstDay = new Date(date.getFullYear(), date.getMonth(), 1).getDay();
-  const totalDays = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
-  const totalWeeks = Math.ceil((firstDay + totalDays) / 7);
-  
-  for (let weekNum = 0; weekNum < totalWeeks; weekNum++) {
-    // Calculate start and end dates for this week
-    const weekStart = new Date(startOfMonth);
-    weekStart.setDate(1 + (weekNum * 7) - firstDay);
-    if (weekStart < startOfMonth) {
-      weekStart.setTime(startOfMonth.getTime());
-    }
+}> => {
+  try {
+    // Get the start and end of the month
+    const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
+    const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999);
     
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 6);
-    if (weekEnd > endOfMonth) {
-      weekEnd.setTime(endOfMonth.getTime());
-    }
+    // Get metrics
+    const { data: metricsData, error: metricsError } = await supabase
+      .rpc('get_metrics', {
+        start_date: startOfMonth.toISOString(),
+        end_date: endOfMonth.toISOString()
+      });
     
-    // Filter tickets for this week
-    const weekTickets = monthlyTickets.filter(ticket => {
-      const ticketDate = new Date(ticket.date);
-      return ticketDate >= weekStart && ticketDate <= weekEnd;
-    });
+    if (metricsError) throw metricsError;
     
-    const weekSales = weekTickets.reduce((sum, ticket) => sum + ticket.total, 0);
-    const weekValets = weekTickets.reduce((sum, ticket) => sum + ticket.valetQuantity, 0);
+    const metrics = metricsData[0];
     
-    weeklyBreakdown.push({
-      weekNumber: weekNum + 1,
-      sales: weekSales,
-      valets: weekValets
-    });
-  }
-  
-  // Compile dry cleaning items
-  const dryCleaningMap = new Map<string, { quantity: number; sales: number }>();
-  
-  monthlyTickets.forEach(ticket => {
-    if (ticket.dryCleaningItems && ticket.dryCleaningItems.length > 0) {
-      ticket.dryCleaningItems.forEach(item => {
-        const existing = dryCleaningMap.get(item.name);
-        if (existing) {
-          existing.quantity += item.quantity;
-          existing.sales += item.price * item.quantity;
-        } else {
-          dryCleaningMap.set(item.name, {
-            quantity: item.quantity,
-            sales: item.price * item.quantity
-          });
-        }
+    // Get all tickets for the month
+    const { data: monthTickets, error: ticketsError } = await supabase
+      .from('tickets')
+      .select(`
+        id,
+        date,
+        total,
+        valet_quantity,
+        dry_cleaning_items (
+          name,
+          price,
+          quantity
+        )
+      `)
+      .gte('date', startOfMonth.toISOString())
+      .lte('date', endOfMonth.toISOString());
+    
+    if (ticketsError) throw ticketsError;
+    
+    // Calculate weekly breakdown
+    const weeklyBreakdown: { weekNumber: number; sales: number; valets: number }[] = [];
+    
+    // Get number of weeks in the month
+    const firstDay = new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+    const totalDays = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+    const totalWeeks = Math.ceil((firstDay + totalDays) / 7);
+    
+    for (let weekNum = 0; weekNum < totalWeeks; weekNum++) {
+      // Calculate start and end dates for this week
+      const weekStart = new Date(startOfMonth);
+      weekStart.setDate(1 + (weekNum * 7) - firstDay);
+      if (weekStart < startOfMonth) {
+        weekStart.setTime(startOfMonth.getTime());
+      }
+      
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6);
+      if (weekEnd > endOfMonth) {
+        weekEnd.setTime(endOfMonth.getTime());
+      }
+      
+      // Filter tickets for this week
+      const weekTickets = monthTickets.filter((ticket: any) => {
+        const ticketDate = new Date(ticket.date);
+        return ticketDate >= weekStart && ticketDate <= weekEnd;
+      });
+      
+      const weekSales = weekTickets.reduce((sum, ticket: any) => sum + parseFloat(ticket.total), 0);
+      const weekValets = weekTickets.reduce((sum, ticket: any) => sum + ticket.valet_quantity, 0);
+      
+      weeklyBreakdown.push({
+        weekNumber: weekNum + 1,
+        sales: weekSales,
+        valets: weekValets
       });
     }
-  });
-  
-  const dryCleaningItems = Array.from(dryCleaningMap.entries()).map(([name, data]) => ({
-    name,
-    quantity: data.quantity,
-    sales: data.sales
-  }));
-  
-  return { totalValets, totalSales, paymentBreakdown, weeklyBreakdown, dryCleaningItems };
+    
+    // Compile dry cleaning items
+    const dryCleaningMap = new Map<string, { quantity: number; sales: number }>();
+    
+    monthTickets.forEach((ticket: any) => {
+      if (ticket.dry_cleaning_items && ticket.dry_cleaning_items.length > 0) {
+        ticket.dry_cleaning_items.forEach((item: any) => {
+          const existing = dryCleaningMap.get(item.name);
+          if (existing) {
+            existing.quantity += item.quantity;
+            existing.sales += parseFloat(item.price) * item.quantity;
+          } else {
+            dryCleaningMap.set(item.name, {
+              quantity: item.quantity,
+              sales: parseFloat(item.price) * item.quantity
+            });
+          }
+        });
+      }
+    });
+    
+    const dryCleaningItems = Array.from(dryCleaningMap.entries()).map(([name, data]) => ({
+      name,
+      quantity: data.quantity,
+      sales: data.sales
+    }));
+    
+    return { 
+      totalValets: Number(metrics.total_valets) || 0, 
+      totalSales: Number(metrics.total_sales) || 0,
+      paymentBreakdown: {
+        cash: Number(metrics.cash_payments) || 0,
+        debit: Number(metrics.debit_payments) || 0,
+        mercadopago: Number(metrics.mercadopago_payments) || 0,
+        cuentadni: Number(metrics.cuentadni_payments) || 0
+      },
+      weeklyBreakdown,
+      dryCleaningItems
+    };
+  } catch (error) {
+    console.error('Error fetching monthly metrics from Supabase:', error);
+    // Fallback to localStorage
+    const tickets = await getStoredTickets();
+    
+    // Get the start and end of the month
+    const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
+    const endOfMonth = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999);
+    
+    // Filter tickets for the month
+    const monthlyTickets = tickets.filter(ticket => {
+      const ticketDate = new Date(ticket.date);
+      return ticketDate >= startOfMonth && ticketDate <= endOfMonth;
+    });
+    
+    // Calculate metrics
+    const totalValets = monthlyTickets.reduce((sum, ticket) => sum + ticket.valetQuantity, 0);
+    const totalSales = monthlyTickets.reduce((sum, ticket) => sum + ticket.total, 0);
+    
+    // Calculate payment breakdown
+    const paymentBreakdown: Record<PaymentMethod, number> = {
+      cash: 0,
+      debit: 0,
+      mercadopago: 0,
+      cuentadni: 0
+    };
+    
+    monthlyTickets.forEach(ticket => {
+      if (ticket.paymentMethod) {
+        paymentBreakdown[ticket.paymentMethod] += ticket.total;
+      }
+    });
+    
+    // Calculate weekly breakdown (4-5 weeks per month)
+    const weeklyBreakdown: { weekNumber: number; sales: number; valets: number }[] = [];
+    
+    // Get number of weeks in the month
+    const firstDay = new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+    const totalDays = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+    const totalWeeks = Math.ceil((firstDay + totalDays) / 7);
+    
+    for (let weekNum = 0; weekNum < totalWeeks; weekNum++) {
+      // Calculate start and end dates for this week
+      const weekStart = new Date(startOfMonth);
+      weekStart.setDate(1 + (weekNum * 7) - firstDay);
+      if (weekStart < startOfMonth) {
+        weekStart.setTime(startOfMonth.getTime());
+      }
+      
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6);
+      if (weekEnd > endOfMonth) {
+        weekEnd.setTime(endOfMonth.getTime());
+      }
+      
+      // Filter tickets for this week
+      const weekTickets = monthlyTickets.filter(ticket => {
+        const ticketDate = new Date(ticket.date);
+        return ticketDate >= weekStart && ticketDate <= weekEnd;
+      });
+      
+      const weekSales = weekTickets.reduce((sum, ticket) => sum + ticket.total, 0);
+      const weekValets = weekTickets.reduce((sum, ticket) => sum + ticket.valetQuantity, 0);
+      
+      weeklyBreakdown.push({
+        weekNumber: weekNum + 1,
+        sales: weekSales,
+        valets: weekValets
+      });
+    }
+    
+    // Compile dry cleaning items
+    const dryCleaningMap = new Map<string, { quantity: number; sales: number }>();
+    
+    monthlyTickets.forEach(ticket => {
+      if (ticket.dryCleaningItems && ticket.dryCleaningItems.length > 0) {
+        ticket.dryCleaningItems.forEach(item => {
+          const existing = dryCleaningMap.get(item.name);
+          if (existing) {
+            existing.quantity += item.quantity;
+            existing.sales += item.price * item.quantity;
+          } else {
+            dryCleaningMap.set(item.name, {
+              quantity: item.quantity,
+              sales: item.price * item.quantity
+            });
+          }
+        });
+      }
+    });
+    
+    const dryCleaningItems = Array.from(dryCleaningMap.entries()).map(([name, data]) => ({
+      name,
+      quantity: data.quantity,
+      sales: data.sales
+    }));
+    
+    return { totalValets, totalSales, paymentBreakdown, weeklyBreakdown, dryCleaningItems };
+  }
 };

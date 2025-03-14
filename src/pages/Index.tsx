@@ -5,7 +5,7 @@ import LaundryHeader from '@/components/LaundryHeader';
 import TicketForm from '@/components/TicketForm';
 import MetricsPanel from '@/components/MetricsPanel';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Ticket as TicketIcon, BarChart3, Package, CreditCard, Search, UserCog } from 'lucide-react';
+import { Ticket as TicketIcon, BarChart3, Package, Search, UserCog } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
 import { getCurrentUser, hasPermission } from '@/utils/authService';
@@ -37,7 +37,7 @@ const Index: React.FC = () => {
         </div>
         
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mb-6">
-          <TabsList className="grid grid-cols-3 w-full">
+          <TabsList className="grid grid-cols-2 w-full">
             {hasPermission('tickets.create') && (
               <TabsTrigger value="tickets" className="flex items-center gap-2">
                 <TicketIcon className="h-4 w-4" />
@@ -50,10 +50,6 @@ const Index: React.FC = () => {
                 Métricas
               </TabsTrigger>
             )}
-            <TabsTrigger value="payments" className="flex items-center gap-2">
-              <CreditCard className="h-4 w-4" />
-              Pagos
-            </TabsTrigger>
           </TabsList>
           
           {hasPermission('tickets.create') && (
@@ -67,36 +63,6 @@ const Index: React.FC = () => {
               <MetricsPanel />
             </TabsContent>
           )}
-          
-          <TabsContent value="payments" className="mt-6">
-            <div className="bg-white shadow-md rounded-lg p-6">
-              <h3 className="text-lg font-semibold mb-4 text-center">Formas de Pago</h3>
-              
-              <div className="space-y-4">
-                <div className="p-3 border border-green-200 bg-green-50 rounded-md">
-                  <h4 className="font-medium text-green-800">Efectivo</h4>
-                  <p className="text-sm text-green-700">Pago en efectivo al momento de la entrega.</p>
-                </div>
-                
-                <div className="p-3 border border-blue-200 bg-blue-50 rounded-md">
-                  <h4 className="font-medium text-blue-800">Transferencia</h4>
-                  <p className="text-sm text-blue-700">CVU: 0000003100042886402505</p>
-                  <p className="text-sm text-blue-700">Alias: camargo590</p>
-                </div>
-                
-                <div className="p-3 border border-purple-200 bg-purple-50 rounded-md">
-                  <h4 className="font-medium text-purple-800">Mercado Pago</h4>
-                  <p className="text-sm text-purple-700">Alias: camargo590</p>
-                  <p className="text-sm text-purple-700">Escanear código QR en el local.</p>
-                </div>
-                
-                <div className="p-3 border border-orange-200 bg-orange-50 rounded-md">
-                  <h4 className="font-medium text-orange-800">Tarjetas</h4>
-                  <p className="text-sm text-orange-700">Aceptamos todas las tarjetas de crédito y débito.</p>
-                </div>
-              </div>
-            </div>
-          </TabsContent>
         </Tabs>
         
         <div className="mt-6 grid grid-cols-2 gap-3">

@@ -157,230 +157,176 @@ const PickupOrders: React.FC = () => {
           <LaundryHeader />
         </div>
         
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mb-6">
-          <TabsList className="w-full">
-            <TabsTrigger value="orders" className="flex items-center gap-2 w-1/2">
-              <Search className="h-4 w-4" />
-              Pedidos a Retirar
-            </TabsTrigger>
-            <TabsTrigger value="payments" className="flex items-center gap-2 w-1/2">
-              <CreditCard className="h-4 w-4" />
-              Métodos de Pago
-            </TabsTrigger>
-          </TabsList>
+        <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
+          <h2 className="text-2xl font-bold mb-6">Pedidos a Retirar</h2>
           
-          <TabsContent value="orders" className="mt-6">
-            <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
-              <h2 className="text-2xl font-bold mb-6">Pedidos a Retirar</h2>
-              
-              <div className="mb-6">
-                <div className="flex flex-col sm:flex-row gap-4 mb-4">
-                  <div className="relative flex-1">
-                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                      <Search className="h-4 w-4 text-gray-400" />
-                    </div>
-                    <Input
-                      type="text"
-                      placeholder={
-                        searchType === 'ticketNumber' 
-                          ? 'Buscar por número de ticket...' 
-                          : searchType === 'name'
-                            ? 'Buscar por nombre de cliente...'
-                            : 'Buscar por teléfono...'
-                      }
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10"
-                    />
-                  </div>
-                  
-                  <div className="flex">
-                    <Button
-                      type="button"
-                      onClick={() => handleSearchTypeChange('ticketNumber')}
-                      variant={searchType === 'ticketNumber' ? 'default' : 'outline'}
-                      className={`flex items-center gap-1 rounded-r-none ${
-                        searchType === 'ticketNumber' ? 'bg-laundry-600 hover:bg-laundry-700' : ''
-                      }`}
-                    >
-                      <FileText className="h-4 w-4" />
-                      <span className="hidden md:inline">Ticket</span>
-                    </Button>
-                    <Button
-                      type="button"
-                      onClick={() => handleSearchTypeChange('name')}
-                      variant={searchType === 'name' ? 'default' : 'outline'}
-                      className={`flex items-center gap-1 rounded-none border-x-0 ${
-                        searchType === 'name' ? 'bg-laundry-600 hover:bg-laundry-700' : ''
-                      }`}
-                    >
-                      <Calendar className="h-4 w-4" />
-                      <span className="hidden md:inline">Nombre</span>
-                    </Button>
-                    <Button
-                      type="button"
-                      onClick={() => handleSearchTypeChange('phone')}
-                      variant={searchType === 'phone' ? 'default' : 'outline'}
-                      className={`flex items-center gap-1 rounded-l-none ${
-                        searchType === 'phone' ? 'bg-laundry-600 hover:bg-laundry-700' : ''
-                      }`}
-                    >
-                      <Phone className="h-4 w-4" />
-                      <span className="hidden md:inline">Teléfono</span>
-                    </Button>
-                  </div>
+          <div className="mb-6">
+            <div className="flex flex-col sm:flex-row gap-4 mb-4">
+              <div className="relative flex-1">
+                <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                  <Search className="h-4 w-4 text-gray-400" />
                 </div>
+                <Input
+                  type="text"
+                  placeholder={
+                    searchType === 'ticketNumber' 
+                      ? 'Buscar por número de ticket...' 
+                      : searchType === 'name'
+                        ? 'Buscar por nombre de cliente...'
+                        : 'Buscar por teléfono...'
+                  }
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10"
+                />
               </div>
               
-              <div className="grid md:grid-cols-2 gap-6">
-                {/* List of tickets */}
-                <div className="bg-gray-50 rounded-lg p-4 h-[500px] overflow-y-auto">
-                  {filteredTickets.length > 0 ? (
-                    <div className="space-y-3">
-                      {filteredTickets.map((ticket, index) => (
-                        <div
-                          key={index}
-                          className={`p-3 border rounded-lg cursor-pointer transition-all ${
-                            selectedTicket === ticket 
-                              ? 'border-laundry-500 bg-laundry-50' 
-                              : 'border-gray-200 hover:bg-gray-100'
-                          }`}
-                          onClick={() => setSelectedTicket(ticket)}
-                        >
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <div className="font-medium">{ticket.name}</div>
-                              <div className="text-sm text-gray-500">{ticket.phone}</div>
-                            </div>
-                            <Badge className="bg-laundry-500">
-                              #{ticket.ticketNumber || index + 1}
-                            </Badge>
-                          </div>
-                          <div className="mt-2 flex justify-between text-sm">
-                            <div>
-                              Fecha: {formatDate(ticket.date)}
-                            </div>
-                            <div className="font-semibold text-laundry-700">
-                              {new Intl.NumberFormat('es-AR', {
-                                style: 'currency',
-                                currency: 'ARS',
-                                minimumFractionDigits: 0
-                              }).format(ticket.total)}
-                            </div>
-                          </div>
+              <div className="flex">
+                <Button
+                  type="button"
+                  onClick={() => handleSearchTypeChange('ticketNumber')}
+                  variant={searchType === 'ticketNumber' ? 'default' : 'outline'}
+                  className={`flex items-center gap-1 rounded-r-none ${
+                    searchType === 'ticketNumber' ? 'bg-laundry-600 hover:bg-laundry-700' : ''
+                  }`}
+                >
+                  <FileText className="h-4 w-4" />
+                  <span className="hidden md:inline">Ticket</span>
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => handleSearchTypeChange('name')}
+                  variant={searchType === 'name' ? 'default' : 'outline'}
+                  className={`flex items-center gap-1 rounded-none border-x-0 ${
+                    searchType === 'name' ? 'bg-laundry-600 hover:bg-laundry-700' : ''
+                  }`}
+                >
+                  <Calendar className="h-4 w-4" />
+                  <span className="hidden md:inline">Nombre</span>
+                </Button>
+                <Button
+                  type="button"
+                  onClick={() => handleSearchTypeChange('phone')}
+                  variant={searchType === 'phone' ? 'default' : 'outline'}
+                  className={`flex items-center gap-1 rounded-l-none ${
+                    searchType === 'phone' ? 'bg-laundry-600 hover:bg-laundry-700' : ''
+                  }`}
+                >
+                  <Phone className="h-4 w-4" />
+                  <span className="hidden md:inline">Teléfono</span>
+                </Button>
+              </div>
+            </div>
+          </div>
+          
+          <div className="grid md:grid-cols-2 gap-6">
+            {/* List of tickets */}
+            <div className="bg-gray-50 rounded-lg p-4 h-[500px] overflow-y-auto">
+              {filteredTickets.length > 0 ? (
+                <div className="space-y-3">
+                  {filteredTickets.map((ticket, index) => (
+                    <div
+                      key={index}
+                      className={`p-3 border rounded-lg cursor-pointer transition-all ${
+                        selectedTicket === ticket 
+                          ? 'border-laundry-500 bg-laundry-50' 
+                          : 'border-gray-200 hover:bg-gray-100'
+                      }`}
+                      onClick={() => setSelectedTicket(ticket)}
+                    >
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="font-medium">{ticket.name}</div>
+                          <div className="text-sm text-gray-500">{ticket.phone}</div>
                         </div>
-                      ))}
+                        <Badge className="bg-laundry-500">
+                          #{ticket.ticketNumber || index + 1}
+                        </Badge>
+                      </div>
+                      <div className="mt-2 flex justify-between text-sm">
+                        <div>
+                          Fecha: {formatDate(ticket.date)}
+                        </div>
+                        <div className="font-semibold text-laundry-700">
+                          {new Intl.NumberFormat('es-AR', {
+                            style: 'currency',
+                            currency: 'ARS',
+                            minimumFractionDigits: 0
+                          }).format(ticket.total)}
+                        </div>
+                      </div>
                     </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center h-full text-gray-500">
-                      <Search className="h-12 w-12 mb-2 text-gray-300" />
-                      <p>No se encontraron tickets.</p>
-                    </div>
-                  )}
+                  ))}
                 </div>
-                
-                {/* Ticket details and payment method selection */}
-                <div className="bg-gray-50 rounded-lg p-4 h-[500px] overflow-y-auto">
-                  {selectedTicket ? (
-                    <div>
-                      <div className="mb-6">
-                        <h3 className="text-lg font-medium mb-3">Método de Pago</h3>
-                        <RadioGroup 
-                          value={selectedPaymentMethod || ''} 
-                          onValueChange={(value: PaymentMethod) => handlePaymentMethodChange(value)}
-                          className="grid grid-cols-2 gap-3"
-                        >
-                          <div className={`border rounded-lg p-3 ${selectedPaymentMethod === 'cash' ? 'border-green-500 bg-green-50' : 'border-gray-200'}`}>
-                            <RadioGroupItem value="cash" id="payment-cash" className="sr-only" />
-                            <label htmlFor="payment-cash" className="flex items-center gap-2 cursor-pointer">
-                              <Banknote className="h-5 w-5 text-green-600" />
-                              <span className="font-medium">Efectivo</span>
-                            </label>
-                          </div>
-                          
-                          <div className={`border rounded-lg p-3 ${selectedPaymentMethod === 'debit' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}>
-                            <RadioGroupItem value="debit" id="payment-debit" className="sr-only" />
-                            <label htmlFor="payment-debit" className="flex items-center gap-2 cursor-pointer">
-                              <CreditCard className="h-5 w-5 text-blue-600" />
-                              <span className="font-medium">Débito FC</span>
-                            </label>
-                          </div>
-                          
-                          <div className={`border rounded-lg p-3 ${selectedPaymentMethod === 'mercadopago' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}>
-                            <RadioGroupItem value="mercadopago" id="payment-mp" className="sr-only" />
-                            <label htmlFor="payment-mp" className="flex items-center gap-2 cursor-pointer">
-                              <Smartphone className="h-5 w-5 text-blue-500" />
-                              <span className="font-medium">Mercado Pago FC</span>
-                            </label>
-                          </div>
-                          
-                          <div className={`border rounded-lg p-3 ${selectedPaymentMethod === 'cuentadni' ? 'border-yellow-500 bg-yellow-50' : 'border-gray-200'}`}>
-                            <RadioGroupItem value="cuentadni" id="payment-cuentadni" className="sr-only" />
-                            <label htmlFor="payment-cuentadni" className="flex items-center gap-2 cursor-pointer">
-                              <Landmark className="h-5 w-5 text-yellow-600" />
-                              <span className="font-medium">Cuenta DNI FC</span>
-                            </label>
-                          </div>
-                        </RadioGroup>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-gray-500">
+                  <Search className="h-12 w-12 mb-2 text-gray-300" />
+                  <p>No se encontraron tickets.</p>
+                </div>
+              )}
+            </div>
+            
+            {/* Ticket details and payment method selection */}
+            <div className="bg-gray-50 rounded-lg p-4 h-[500px] overflow-y-auto">
+              {selectedTicket ? (
+                <div>
+                  <div className="mb-6">
+                    <h3 className="text-lg font-medium mb-3">Método de Pago</h3>
+                    <RadioGroup 
+                      value={selectedPaymentMethod || ''} 
+                      onValueChange={(value: PaymentMethod) => handlePaymentMethodChange(value)}
+                      className="grid grid-cols-2 gap-3"
+                    >
+                      <div className={`border rounded-lg p-3 ${selectedPaymentMethod === 'cash' ? 'border-green-500 bg-green-50' : 'border-gray-200'}`}>
+                        <RadioGroupItem value="cash" id="payment-cash" className="sr-only" />
+                        <label htmlFor="payment-cash" className="flex items-center gap-2 cursor-pointer">
+                          <Banknote className="h-5 w-5 text-green-600" />
+                          <span className="font-medium">Efectivo</span>
+                        </label>
                       </div>
                       
-                      <div className="mt-3">
-                        <Ticket 
-                          customer={selectedTicket}
-                          onNewTicket={() => setSelectedTicket(null)}
-                        />
+                      <div className={`border rounded-lg p-3 ${selectedPaymentMethod === 'debit' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}>
+                        <RadioGroupItem value="debit" id="payment-debit" className="sr-only" />
+                        <label htmlFor="payment-debit" className="flex items-center gap-2 cursor-pointer">
+                          <CreditCard className="h-5 w-5 text-blue-600" />
+                          <span className="font-medium">Débito FC</span>
+                        </label>
                       </div>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center justify-center h-full text-gray-500">
-                      <FileText className="h-12 w-12 mb-2 text-gray-300" />
-                      <p>Seleccione un ticket para ver los detalles</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </TabsContent>
-          
-          <TabsContent value="payments" className="mt-6">
-            <div className="bg-white shadow-md rounded-lg p-6">
-              <h3 className="text-xl font-semibold mb-6 text-center">Métodos de Pago</h3>
-              
-              <div className="space-y-6">
-                <div className="p-4 border border-green-200 bg-green-50 rounded-md">
-                  <h4 className="font-medium text-green-800 text-lg mb-2">Efectivo</h4>
-                  <p className="text-green-700">Pago en efectivo al momento de la entrega.</p>
-                  <div className="mt-2 bg-green-100 p-3 rounded">
-                    <p className="font-medium">Precio por Valet: $5.000</p>
+                      
+                      <div className={`border rounded-lg p-3 ${selectedPaymentMethod === 'mercadopago' ? 'border-blue-500 bg-blue-50' : 'border-gray-200'}`}>
+                        <RadioGroupItem value="mercadopago" id="payment-mp" className="sr-only" />
+                        <label htmlFor="payment-mp" className="flex items-center gap-2 cursor-pointer">
+                          <Smartphone className="h-5 w-5 text-blue-500" />
+                          <span className="font-medium">Mercado Pago FC</span>
+                        </label>
+                      </div>
+                      
+                      <div className={`border rounded-lg p-3 ${selectedPaymentMethod === 'cuentadni' ? 'border-yellow-500 bg-yellow-50' : 'border-gray-200'}`}>
+                        <RadioGroupItem value="cuentadni" id="payment-cuentadni" className="sr-only" />
+                        <label htmlFor="payment-cuentadni" className="flex items-center gap-2 cursor-pointer">
+                          <Landmark className="h-5 w-5 text-yellow-600" />
+                          <span className="font-medium">Cuenta DNI FC</span>
+                        </label>
+                      </div>
+                    </RadioGroup>
+                  </div>
+                  
+                  <div className="mt-3">
+                    <Ticket 
+                      customer={selectedTicket}
+                      onNewTicket={() => setSelectedTicket(null)}
+                    />
                   </div>
                 </div>
-                
-                <div className="p-4 border border-blue-200 bg-blue-50 rounded-md">
-                  <h4 className="font-medium text-blue-800 text-lg mb-2">Transferencia</h4>
-                  <p className="text-blue-700">CVU: 0000003100042886402505</p>
-                  <p className="text-blue-700">Alias: camargo590</p>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full text-gray-500">
+                  <FileText className="h-12 w-12 mb-2 text-gray-300" />
+                  <p>Seleccione un ticket para ver los detalles</p>
                 </div>
-                
-                <div className="p-4 border border-purple-200 bg-purple-50 rounded-md">
-                  <h4 className="font-medium text-purple-800 text-lg mb-2">Mercado Pago</h4>
-                  <p className="text-purple-700">Alias: camargo590</p>
-                  <p className="text-purple-700">Escanear código QR en el local.</p>
-                </div>
-                
-                <div className="p-4 border border-orange-200 bg-orange-50 rounded-md">
-                  <h4 className="font-medium text-orange-800 text-lg mb-2">Tarjetas</h4>
-                  <p className="text-orange-700">Aceptamos todas las tarjetas de crédito y débito.</p>
-                </div>
-                
-                <div className="mt-4 p-4 border border-gray-200 bg-gray-50 rounded-md">
-                  <p className="text-center text-gray-500 text-sm">
-                    Para consultas sobre pagos, contacte al administrador.
-                  </p>
-                </div>
-              </div>
+              )}
             </div>
-          </TabsContent>
-        </Tabs>
+          </div>
+        </div>
       </div>
     </div>
   );

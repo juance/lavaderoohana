@@ -10,7 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import { Badge } from '@/components/ui/badge';
 import LaundryHeader from '@/components/LaundryHeader';
-import { UserCog, UserPlus, ArrowLeft, Trash2 } from 'lucide-react';
+import { UserCog, UserPlus, ArrowLeft, Trash2, Save, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 
@@ -23,6 +23,8 @@ const UserManagement: React.FC = () => {
     permissions: []
   });
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [editMode, setEditMode] = useState<boolean>(false);
+  const [editPassword, setEditPassword] = useState<string>('');
   const { toast } = useToast();
   const navigate = useNavigate();
   
@@ -101,6 +103,41 @@ const UserManagement: React.FC = () => {
     }
   };
   
+  const handleUpdateUserInfo = () => {
+    if (!selectedUser) return;
+    
+    if (editPassword && editPassword.length > 0) {
+      // Update user object with new password
+      const updatedUser = {
+        ...selectedUser,
+        password: editPassword
+      };
+      
+      // Find user index
+      const userIndex = users.findIndex(u => u.id === selectedUser.id);
+      if (userIndex !== -1) {
+        // Create a new users array with the updated user
+        const updatedUsers = [...users];
+        updatedUsers[userIndex] = updatedUser;
+        
+        // Save to localStorage
+        localStorage.setItem('laundry_users', JSON.stringify(updatedUsers));
+        
+        // Update state
+        setUsers(updatedUsers);
+        setSelectedUser(updatedUser);
+        
+        toast({
+          title: "Contraseña actualizada",
+          description: `La contraseña de ${updatedUser.username} ha sido actualizada.`,
+        });
+      }
+    }
+    
+    setEditMode(false);
+    setEditPassword('');
+  };
+  
   const handleUpdatePermissions = (userId: string, permission: Permission, checked: boolean) => {
     if (!selectedUser) return;
     
@@ -122,6 +159,36 @@ const UserManagement: React.FC = () => {
       toast({
         title: "Permisos actualizados",
         description: `Los permisos de ${updatedUser.username} han sido actualizados.`,
+      });
+    }
+  };
+  
+  const handleUpdateRole = (role: UserRole) => {
+    if (!selectedUser) return;
+    
+    // Find user index
+    const userIndex = users.findIndex(u => u.id === selectedUser.id);
+    if (userIndex !== -1) {
+      // Create a new user object with updated role
+      const updatedUser = {
+        ...selectedUser,
+        role
+      };
+      
+      // Create a new users array with the updated user
+      const updatedUsers = [...users];
+      updatedUsers[userIndex] = updatedUser;
+      
+      // Save to localStorage
+      localStorage.setItem('laundry_users', JSON.stringify(updatedUsers));
+      
+      // Update state
+      setUsers(updatedUsers);
+      setSelectedUser(updatedUser);
+      
+      toast({
+        title: "Rol actualizado",
+        description: `El rol de ${updatedUser.username} ha sido cambiado a ${role === 'admin' ? 'Administrador' : 'Personal'}.`,
       });
     }
   };
@@ -166,7 +233,10 @@ const UserManagement: React.FC = () => {
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <div className="flex-1" onClick={() => setSelectedUser(user)}>
+                      <div className="flex-1" onClick={() => {
+                        setSelectedUser(user);
+                        setEditMode(false); // Exit edit mode when selecting a different user
+                      }}>
                         <span className="font-medium">{user.username}</span>
                         <Badge className="ml-2" variant={user.role === 'admin' ? 'default' : 'secondary'}>
                           {user.role === 'admin' ? 'Administrador' : 'Personal'}
@@ -227,25 +297,105 @@ const UserManagement: React.FC = () => {
             <div>
               {selectedUser ? (
                 <div>
-                  <h3 className="text-xl font-semibold mb-4">
-                    Editar Permisos: {selectedUser.username}
-                  </h3>
-                  <div className="space-y-4">
-                    {allPermissions.map((permission) => (
-                      <div key={permission.value} className="flex items-center space-x-2">
-                        <Checkbox 
-                          id={`perm-${permission.value}`} 
-                          checked={selectedUser.permissions.includes(permission.value)}
-                          onCheckedChange={(checked) => 
-                            handleUpdatePermissions(selectedUser.id, permission.value, checked === true)
-                          }
-                        />
-                        <Label htmlFor={`perm-${permission.value}`}>
-                          {permission.label}
-                        </Label>
-                      </div>
-                    ))}
+                  <div className="flex justify-between items-center mb-4">
+                    <h3 className="text-xl font-semibold">
+                      {editMode ? "Editar Usuario: " : "Editar Permisos: "}{selectedUser.username}
+                    </h3>
+                    {!editMode && (
+                      <Button onClick={() => setEditMode(true)} variant="outline" size="sm">
+                        Editar Usuario
+                      </Button>
+                    )}
                   </div>
+                  
+                  {editMode ? (
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-username">Nombre de usuario</Label>
+                        <Input
+                          id="edit-username"
+                          value={selectedUser.username}
+                          disabled
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label htmlFor="edit-password">Nueva contraseña</Label>
+                        <Input
+                          id="edit-password"
+                          type="password"
+                          value={editPassword}
+                          onChange={(e) => setEditPassword(e.target.value)}
+                          placeholder="Ingrese nueva contraseña"
+                        />
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <Label>Tipo de Usuario</Label>
+                        <div className="flex space-x-4">
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="radio"
+                              id="edit-role-staff"
+                              checked={selectedUser.role === 'staff'}
+                              onChange={() => handleUpdateRole('staff')}
+                              disabled={selectedUser.id === '1'} // Disable for admin1
+                            />
+                            <Label htmlFor="edit-role-staff">Personal</Label>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="radio"
+                              id="edit-role-admin"
+                              checked={selectedUser.role === 'admin'}
+                              onChange={() => handleUpdateRole('admin')}
+                              disabled={selectedUser.id === '1'} // Disable for admin1
+                            />
+                            <Label htmlFor="edit-role-admin">Administrador</Label>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="pt-4 flex gap-2">
+                        <Button 
+                          onClick={handleUpdateUserInfo}
+                          className="flex items-center gap-2 bg-laundry-600 hover:bg-laundry-700"
+                        >
+                          <Save className="h-4 w-4" />
+                          Guardar
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          onClick={() => {
+                            setEditMode(false);
+                            setEditPassword('');
+                          }}
+                          className="flex items-center gap-2"
+                        >
+                          <X className="h-4 w-4" />
+                          Cancelar
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {allPermissions.map((permission) => (
+                        <div key={permission.value} className="flex items-center space-x-2">
+                          <Checkbox 
+                            id={`perm-${permission.value}`} 
+                            checked={selectedUser.permissions.includes(permission.value)}
+                            disabled={selectedUser.id === '1' && permission.value === 'users.manage'} // Disable removing users.manage from admin1
+                            onCheckedChange={(checked) => 
+                              handleUpdatePermissions(selectedUser.id, permission.value, checked === true)
+                            }
+                          />
+                          <Label htmlFor={`perm-${permission.value}`}>
+                            {permission.label}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div>
