@@ -1,5 +1,5 @@
 
-import { supabase } from '@/integrations/supabase/client';
+import { supabase, formatDateForSupabase, parseSupabaseDate } from '@/integrations/supabase/client';
 
 interface LaundryOptions {
   separateByColor: boolean;
@@ -76,7 +76,7 @@ export const storeTicketData = async (ticket: Customer): Promise<void> => {
         valet_quantity: ticket.valetQuantity,
         payment_method: ticket.paymentMethod,
         total: ticket.total,
-        date: ticket.date instanceof Date ? ticket.date.toISOString() : ticket.date
+        date: formatDateForSupabase(ticket.date)
       })
       .select('id')
       .single();
@@ -124,7 +124,7 @@ export const storeTicketData = async (ticket: Customer): Promise<void> => {
     const tickets = await getStoredTicketsFromLocalStorage();
     tickets.push({
       ...ticket,
-      date: ticket.date instanceof Date ? ticket.date.toISOString() : ticket.date // Convert Date to string for storage
+      date: formatDateForSupabase(ticket.date) // Convert Date to string for storage
     });
     localStorage.setItem('laundryTickets', JSON.stringify(tickets));
   }
@@ -193,8 +193,8 @@ export const getStoredTickets = async (): Promise<Customer[]> => {
         ticketNumber: ticket.ticket_number,
         valetQuantity: ticket.valet_quantity,
         paymentMethod: ticket.payment_method as PaymentMethod,
-        total: parseFloat(ticket.total),
-        date: new Date(ticket.date),
+        total: parseFloat(ticket.total.toString()),
+        date: parseSupabaseDate(ticket.date),
         laundryOptions,
         dryCleaningItems: dryCleaningItems?.length ? dryCleaningItems : undefined
       };
@@ -214,7 +214,7 @@ const getStoredTicketsFromLocalStorage = async (): Promise<Customer[]> => {
   const tickets = JSON.parse(ticketsJson);
   return tickets.map((ticket: any) => ({
     ...ticket,
-    date: ticket.date ? new Date(ticket.date) : new Date() // Convert string back to Date
+    date: ticket.date ? parseSupabaseDate(ticket.date) : new Date() // Convert string back to Date
   }));
 };
 
@@ -226,7 +226,7 @@ export const storeExpense = async (expense: Expense): Promise<void> => {
       .insert({
         description: expense.description,
         amount: expense.amount,
-        date: expense.date instanceof Date ? expense.date.toISOString() : expense.date
+        date: formatDateForSupabase(expense.date)
       });
   } catch (error) {
     console.error('Error storing expense data:', error);
@@ -234,7 +234,7 @@ export const storeExpense = async (expense: Expense): Promise<void> => {
     const expenses = await getStoredExpensesFromLocalStorage();
     expenses.push({
       ...expense,
-      date: expense.date instanceof Date ? expense.date.toISOString() : expense.date
+      date: formatDateForSupabase(expense.date)
     });
     localStorage.setItem('laundryExpenses', JSON.stringify(expenses));
   }
@@ -253,7 +253,7 @@ export const getStoredExpenses = async (): Promise<Expense[]> => {
     return expenses.map(expense => ({
       description: expense.description,
       amount: parseFloat(expense.amount.toString()),
-      date: new Date(expense.date)
+      date: parseSupabaseDate(expense.date)
     }));
   } catch (error) {
     console.error('Error fetching expenses from Supabase:', error);
@@ -270,7 +270,7 @@ const getStoredExpensesFromLocalStorage = async (): Promise<Expense[]> => {
   const expenses = JSON.parse(expensesJson);
   return expenses.map((expense: any) => ({
     ...expense,
-    date: expense.date ? new Date(expense.date) : new Date()
+    date: expense.date ? parseSupabaseDate(expense.date) : new Date()
   }));
 };
 
@@ -311,7 +311,7 @@ export const getClientVisitFrequency = async (phone: string): Promise<{ lastVisi
     if (recentError) throw recentError;
     
     return {
-      lastVisit: recentTickets && recentTickets.length > 0 ? new Date(recentTickets[0].date) : null,
+      lastVisit: recentTickets && recentTickets.length > 0 ? parseSupabaseDate(recentTickets[0].date) : null,
       visitCount: count || 0
     };
   } catch (error) {
@@ -325,10 +325,10 @@ export const getClientVisitFrequency = async (phone: string): Promise<{ lastVisi
     }
     
     // Sort by date (newest first)
-    clientTickets.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    clientTickets.sort((a, b) => b.date.getTime() - a.date.getTime());
     
     return {
-      lastVisit: new Date(clientTickets[0].date),
+      lastVisit: clientTickets[0].date,
       visitCount: clientTickets.length
     };
   }
@@ -352,8 +352,8 @@ export const getDailyMetrics = async (date: Date): Promise<{
     // Use the Supabase function to get metrics
     const { data, error } = await supabase
       .rpc('get_metrics', {
-        start_date: startOfDay.toISOString(),
-        end_date: endOfDay.toISOString()
+        start_date: formatDateForSupabase(startOfDay),
+        end_date: formatDateForSupabase(endOfDay)
       });
     
     if (error) throw error;
@@ -371,8 +371,8 @@ export const getDailyMetrics = async (date: Date): Promise<{
           quantity
         )
       `)
-      .gte('date', startOfDay.toISOString())
-      .lte('date', endOfDay.toISOString());
+      .gte('date', formatDateForSupabase(startOfDay))
+      .lte('date', formatDateForSupabase(endOfDay));
     
     if (ticketsError) throw ticketsError;
     
@@ -495,8 +495,8 @@ export const getWeeklyMetrics = async (date: Date): Promise<{
     // Get metrics
     const { data: metricsData, error: metricsError } = await supabase
       .rpc('get_metrics', {
-        start_date: startOfWeek.toISOString(),
-        end_date: endOfWeek.toISOString()
+        start_date: formatDateForSupabase(startOfWeek),
+        end_date: formatDateForSupabase(endOfWeek)
       });
     
     if (metricsError) throw metricsError;
@@ -517,8 +517,8 @@ export const getWeeklyMetrics = async (date: Date): Promise<{
           quantity
         )
       `)
-      .gte('date', startOfWeek.toISOString())
-      .lte('date', endOfWeek.toISOString())
+      .gte('date', formatDateForSupabase(startOfWeek))
+      .lte('date', formatDateForSupabase(endOfWeek))
       .order('date', { ascending: true });
     
     if (ticketsError) throw ticketsError;
@@ -540,7 +540,7 @@ export const getWeeklyMetrics = async (date: Date): Promise<{
     
     // Fill in data from tickets
     weekTickets.forEach(ticket => {
-      const ticketDate = new Date(ticket.date);
+      const ticketDate = parseSupabaseDate(ticket.date);
       const dateKey = ticketDate.toISOString().split('T')[0];
       
       const dayData = dailyMap.get(dateKey);
@@ -696,8 +696,8 @@ export const getMonthlyMetrics = async (date: Date): Promise<{
     // Get metrics
     const { data: metricsData, error: metricsError } = await supabase
       .rpc('get_metrics', {
-        start_date: startOfMonth.toISOString(),
-        end_date: endOfMonth.toISOString()
+        start_date: formatDateForSupabase(startOfMonth),
+        end_date: formatDateForSupabase(endOfMonth)
       });
     
     if (metricsError) throw metricsError;
@@ -718,8 +718,8 @@ export const getMonthlyMetrics = async (date: Date): Promise<{
           quantity
         )
       `)
-      .gte('date', startOfMonth.toISOString())
-      .lte('date', endOfMonth.toISOString());
+      .gte('date', formatDateForSupabase(startOfMonth))
+      .lte('date', formatDateForSupabase(endOfMonth));
     
     if (ticketsError) throw ticketsError;
     
@@ -747,7 +747,7 @@ export const getMonthlyMetrics = async (date: Date): Promise<{
       
       // Filter tickets for this week
       const weekTickets = monthTickets.filter((ticket: any) => {
-        const ticketDate = new Date(ticket.date);
+        const ticketDate = parseSupabaseDate(ticket.date);
         return ticketDate >= weekStart && ticketDate <= weekEnd;
       });
       
