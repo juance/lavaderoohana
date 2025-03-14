@@ -1,3 +1,5 @@
+import { supabase } from '@/integrations/supabase/client';
+
 interface LaundryOptions {
   separateByColor: boolean;
   delicateDry: boolean;
@@ -34,18 +36,177 @@ interface Expense {
   date: Date;
 }
 
-// Store ticket data in localStorage
-export const storeTicketData = (ticket: Customer): void => {
-  const tickets = getStoredTickets();
-  tickets.push({
-    ...ticket,
-    date: ticket.date instanceof Date ? ticket.date.toISOString() : ticket.date // Convert Date to string for storage
-  });
-  localStorage.setItem('laundryTickets', JSON.stringify(tickets));
+// Store ticket data in Supabase
+export const storeTicketData = async (ticket: Customer): Promise<void> => {
+  try {
+    // 1. Check if customer exists, if not create a new one
+    const { data: existingCustomers, error: customerError } = await supabase
+      .from('customers')
+      .select('id')
+      .eq('phone', ticket.phone)
+      .limit(1);
+    
+    if (customerError) throw customerError;
+
+    let customerId;
+    
+    if (existingCustomers && existingCustomers.length > 0) {
+      customerId = existingCustomers[0].id;
+    } else {
+      const { data: newCustomer, error: createError } = await supabase
+        .from('customers')
+        .insert({
+          name: ticket.name,
+          phone: ticket.phone
+        })
+        .select('id')
+        .single();
+      
+      if (createError) throw createError;
+      customerId = newCustomer.id;
+    }
+    
+    // 2. Create ticket
+    const { data: newTicket, error: ticketError } = await supabase
+      .from('tickets')
+      .insert({
+        customer_id: customerId,
+        ticket_number: ticket.ticketNumber || '',
+        valet_quantity: ticket.valetQuantity,
+        payment_method: ticket.paymentMethod,
+        total: ticket.total,
+        date: ticket.date instanceof Date ? ticket.date.toISOString() : ticket.date
+      })
+      .select('id')
+      .single();
+    
+    if (ticketError) throw ticketError;
+    
+    // 3. Store laundry options
+    const laundryOptionsToInsert = [];
+    for (const [key, value] of Object.entries(ticket.laundryOptions)) {
+      if (value) {
+        laundryOptionsToInsert.push({
+          ticket_id: newTicket.id,
+          option_type: key as any
+        });
+      }
+    }
+    
+    if (laundryOptionsToInsert.length > 0) {
+      const { error: optionsError } = await supabase
+        .from('ticket_laundry_options')
+        .insert(laundryOptionsToInsert);
+      
+      if (optionsError) throw optionsError;
+    }
+    
+    // 4. Store dry cleaning items if any
+    if (ticket.dryCleaningItems && ticket.dryCleaningItems.length > 0) {
+      const dryCleaningToInsert = ticket.dryCleaningItems.map(item => ({
+        ticket_id: newTicket.id,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity
+      }));
+      
+      const { error: dryCleaningError } = await supabase
+        .from('dry_cleaning_items')
+        .insert(dryCleaningToInsert);
+      
+      if (dryCleaningError) throw dryCleaningError;
+    }
+    
+  } catch (error) {
+    console.error('Error storing ticket data:', error);
+    // Fallback to localStorage if Supabase fails
+    const tickets = getStoredTicketsFromLocalStorage();
+    tickets.push({
+      ...ticket,
+      date: ticket.date instanceof Date ? ticket.date.toISOString() : ticket.date // Convert Date to string for storage
+    });
+    localStorage.setItem('laundryTickets', JSON.stringify(tickets));
+  }
 };
 
-// Get all stored tickets
-export const getStoredTickets = (): Customer[] => {
+// Get all stored tickets (with fallback to localStorage)
+export const getStoredTickets = async (): Promise<Customer[]> => {
+  try {
+    // Get all tickets with customer info
+    const { data: tickets, error } = await supabase
+      .from('tickets')
+      .select(`
+        id,
+        ticket_number,
+        valet_quantity,
+        payment_method,
+        total,
+        date,
+        customers (
+          name,
+          phone
+        ),
+        ticket_laundry_options (
+          option_type
+        ),
+        dry_cleaning_items (
+          id,
+          name,
+          price,
+          quantity
+        )
+      `)
+      .order('date', { ascending: false });
+    
+    if (error) throw error;
+    
+    // Transform data to match Customer interface
+    return tickets.map(ticket => {
+      // Build laundry options
+      const laundryOptions: LaundryOptions = {
+        separateByColor: false,
+        delicateDry: false,
+        stainRemoval: false,
+        bleach: false,
+        noFragrance: false,
+        noDry: false
+      };
+      
+      if (ticket.ticket_laundry_options) {
+        ticket.ticket_laundry_options.forEach((option: any) => {
+          laundryOptions[option.option_type as keyof LaundryOptions] = true;
+        });
+      }
+      
+      // Map dry cleaning items
+      const dryCleaningItems = ticket.dry_cleaning_items?.map((item: any) => ({
+        id: item.id,
+        name: item.name,
+        price: parseFloat(item.price),
+        quantity: item.quantity
+      }));
+      
+      return {
+        name: ticket.customers.name,
+        phone: ticket.customers.phone,
+        ticketNumber: ticket.ticket_number,
+        valetQuantity: ticket.valet_quantity,
+        paymentMethod: ticket.payment_method as PaymentMethod,
+        total: parseFloat(ticket.total),
+        date: new Date(ticket.date),
+        laundryOptions,
+        dryCleaningItems: dryCleaningItems?.length ? dryCleaningItems : undefined
+      };
+    });
+  } catch (error) {
+    console.error('Error fetching tickets from Supabase:', error);
+    // Fallback to localStorage
+    return getStoredTicketsFromLocalStorage();
+  }
+};
+
+// Helper function to get tickets from localStorage (fallback)
+const getStoredTicketsFromLocalStorage = (): Customer[] => {
   const ticketsJson = localStorage.getItem('laundryTickets');
   if (!ticketsJson) return [];
   
@@ -57,105 +218,257 @@ export const getStoredTickets = (): Customer[] => {
 };
 
 // Store expense data
-export const storeExpense = (expense: Expense): void => {
-  const expenses = getStoredExpenses();
-  expenses.push({
-    ...expense,
-    date: expense.date instanceof Date ? expense.date.toISOString() : expense.date // Convert Date to string
-  });
-  localStorage.setItem('laundryExpenses', JSON.stringify(expenses));
+export const storeExpense = async (expense: Expense): Promise<void> => {
+  try {
+    await supabase
+      .from('expenses')
+      .insert({
+        description: expense.description,
+        amount: expense.amount,
+        date: expense.date instanceof Date ? expense.date.toISOString() : expense.date
+      });
+  } catch (error) {
+    console.error('Error storing expense data:', error);
+    // Fallback to localStorage
+    const expenses = getStoredExpensesFromLocalStorage();
+    expenses.push({
+      ...expense,
+      date: expense.date instanceof Date ? expense.date.toISOString() : expense.date
+    });
+    localStorage.setItem('laundryExpenses', JSON.stringify(expenses));
+  }
 };
 
 // Get all stored expenses
-export const getStoredExpenses = (): Expense[] => {
+export const getStoredExpenses = async (): Promise<Expense[]> => {
+  try {
+    const { data: expenses, error } = await supabase
+      .from('expenses')
+      .select('*')
+      .order('date', { ascending: false });
+    
+    if (error) throw error;
+    
+    return expenses.map(expense => ({
+      description: expense.description,
+      amount: parseFloat(expense.amount),
+      date: new Date(expense.date)
+    }));
+  } catch (error) {
+    console.error('Error fetching expenses from Supabase:', error);
+    // Fallback to localStorage
+    return getStoredExpensesFromLocalStorage();
+  }
+};
+
+// Helper function to get expenses from localStorage (fallback)
+const getStoredExpensesFromLocalStorage = (): Expense[] => {
   const expensesJson = localStorage.getItem('laundryExpenses');
   if (!expensesJson) return [];
   
   const expenses = JSON.parse(expensesJson);
   return expenses.map((expense: any) => ({
     ...expense,
-    date: expense.date ? new Date(expense.date) : new Date() // Convert string back to Date
+    date: expense.date ? new Date(expense.date) : new Date()
   }));
 };
 
 // Get client visit frequency
-export const getClientVisitFrequency = (phone: string): { lastVisit: Date | null; visitCount: number } => {
-  const tickets = getStoredTickets();
-  const clientTickets = tickets.filter(ticket => ticket.phone === phone);
-  
-  if (clientTickets.length === 0) {
-    return { lastVisit: null, visitCount: 0 };
+export const getClientVisitFrequency = async (phone: string): Promise<{ lastVisit: Date | null; visitCount: number }> => {
+  try {
+    // Get customer ID
+    const { data: customers, error: customerError } = await supabase
+      .from('customers')
+      .select('id')
+      .eq('phone', phone)
+      .limit(1);
+    
+    if (customerError) throw customerError;
+    
+    if (!customers || customers.length === 0) {
+      return { lastVisit: null, visitCount: 0 };
+    }
+    
+    const customerId = customers[0].id;
+    
+    // Count tickets for this customer
+    const { count, error: countError } = await supabase
+      .from('tickets')
+      .select('*', { count: 'exact', head: true })
+      .eq('customer_id', customerId);
+    
+    if (countError) throw countError;
+    
+    // Get most recent visit
+    const { data: recentTickets, error: recentError } = await supabase
+      .from('tickets')
+      .select('date')
+      .eq('customer_id', customerId)
+      .order('date', { ascending: false })
+      .limit(1);
+    
+    if (recentError) throw recentError;
+    
+    return {
+      lastVisit: recentTickets && recentTickets.length > 0 ? new Date(recentTickets[0].date) : null,
+      visitCount: count || 0
+    };
+  } catch (error) {
+    console.error('Error fetching client visit frequency:', error);
+    // Fallback to localStorage
+    const tickets = getStoredTicketsFromLocalStorage();
+    const clientTickets = tickets.filter(ticket => ticket.phone === phone);
+    
+    if (clientTickets.length === 0) {
+      return { lastVisit: null, visitCount: 0 };
+    }
+    
+    // Sort by date (newest first)
+    clientTickets.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    
+    return {
+      lastVisit: new Date(clientTickets[0].date),
+      visitCount: clientTickets.length
+    };
   }
-  
-  // Sort by date (newest first)
-  clientTickets.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  
-  return {
-    lastVisit: new Date(clientTickets[0].date),
-    visitCount: clientTickets.length
-  };
 };
 
 // Get daily metrics
-export const getDailyMetrics = (date: Date): { 
+export const getDailyMetrics = async (date: Date): Promise<{ 
   totalValets: number; 
   totalSales: number;
   paymentBreakdown: Record<PaymentMethod, number>;
   dryCleaningItems: { name: string; quantity: number; sales: number }[];
-} => {
-  const tickets = getStoredTickets();
-  
-  // Filter tickets for the specific date
-  const dailyTickets = tickets.filter(ticket => {
-    const ticketDate = new Date(ticket.date);
-    return ticketDate.getDate() === date.getDate() && 
-           ticketDate.getMonth() === date.getMonth() && 
-           ticketDate.getFullYear() === date.getFullYear();
-  });
-  
-  // Calculate metrics
-  const totalValets = dailyTickets.reduce((sum, ticket) => sum + ticket.valetQuantity, 0);
-  const totalSales = dailyTickets.reduce((sum, ticket) => sum + ticket.total, 0);
-  
-  // Calculate payment breakdown
-  const paymentBreakdown: Record<PaymentMethod, number> = {
-    cash: 0,
-    debit: 0,
-    mercadopago: 0,
-    cuentadni: 0
-  };
-  
-  dailyTickets.forEach(ticket => {
-    paymentBreakdown[ticket.paymentMethod] += ticket.total;
-  });
-  
-  // Compile dry cleaning items
-  const dryCleaningMap = new Map<string, { quantity: number; sales: number }>();
-  
-  dailyTickets.forEach(ticket => {
-    if (ticket.dryCleaningItems && ticket.dryCleaningItems.length > 0) {
-      ticket.dryCleaningItems.forEach(item => {
-        const existing = dryCleaningMap.get(item.name);
-        if (existing) {
-          existing.quantity += item.quantity;
-          existing.sales += item.price * item.quantity;
-        } else {
-          dryCleaningMap.set(item.name, {
-            quantity: item.quantity,
-            sales: item.price * item.quantity
-          });
-        }
+}> => {
+  try {
+    // Set up date range for the day
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+    
+    // Use the Supabase function to get metrics
+    const { data, error } = await supabase
+      .rpc('get_metrics', {
+        start_date: startOfDay.toISOString(),
+        end_date: endOfDay.toISOString()
       });
-    }
-  });
-  
-  const dryCleaningItems = Array.from(dryCleaningMap.entries()).map(([name, data]) => ({
-    name,
-    quantity: data.quantity,
-    sales: data.sales
-  }));
-  
-  return { totalValets, totalSales, paymentBreakdown, dryCleaningItems };
+    
+    if (error) throw error;
+    
+    const metrics = data[0];
+    
+    // Get dry cleaning items for this date range
+    const { data: ticketsForDay, error: ticketsError } = await supabase
+      .from('tickets')
+      .select(`
+        id,
+        dry_cleaning_items (
+          name,
+          price,
+          quantity
+        )
+      `)
+      .gte('date', startOfDay.toISOString())
+      .lte('date', endOfDay.toISOString());
+    
+    if (ticketsError) throw ticketsError;
+    
+    // Compile dry cleaning items
+    const dryCleaningMap = new Map<string, { quantity: number; sales: number }>();
+    
+    ticketsForDay.forEach(ticket => {
+      if (ticket.dry_cleaning_items && ticket.dry_cleaning_items.length > 0) {
+        ticket.dry_cleaning_items.forEach((item: any) => {
+          const existing = dryCleaningMap.get(item.name);
+          if (existing) {
+            existing.quantity += item.quantity;
+            existing.sales += parseFloat(item.price) * item.quantity;
+          } else {
+            dryCleaningMap.set(item.name, {
+              quantity: item.quantity,
+              sales: parseFloat(item.price) * item.quantity
+            });
+          }
+        });
+      }
+    });
+    
+    const dryCleaningItems = Array.from(dryCleaningMap.entries()).map(([name, data]) => ({
+      name,
+      quantity: data.quantity,
+      sales: data.sales
+    }));
+    
+    return { 
+      totalValets: Number(metrics.total_valets) || 0, 
+      totalSales: Number(metrics.total_sales) || 0,
+      paymentBreakdown: {
+        cash: Number(metrics.cash_payments) || 0,
+        debit: Number(metrics.debit_payments) || 0,
+        mercadopago: Number(metrics.mercadopago_payments) || 0,
+        cuentadni: Number(metrics.cuentadni_payments) || 0
+      },
+      dryCleaningItems
+    };
+  } catch (error) {
+    console.error('Error fetching daily metrics from Supabase:', error);
+    // Fallback to original implementation
+    const tickets = await getStoredTickets();
+    
+    // Filter tickets for the specific date
+    const dailyTickets = tickets.filter(ticket => {
+      const ticketDate = new Date(ticket.date);
+      return ticketDate.getDate() === date.getDate() && 
+             ticketDate.getMonth() === date.getMonth() && 
+             ticketDate.getFullYear() === date.getFullYear();
+    });
+    
+    // Calculate metrics
+    const totalValets = dailyTickets.reduce((sum, ticket) => sum + ticket.valetQuantity, 0);
+    const totalSales = dailyTickets.reduce((sum, ticket) => sum + ticket.total, 0);
+    
+    // Calculate payment breakdown
+    const paymentBreakdown: Record<PaymentMethod, number> = {
+      cash: 0,
+      debit: 0,
+      mercadopago: 0,
+      cuentadni: 0
+    };
+    
+    dailyTickets.forEach(ticket => {
+      paymentBreakdown[ticket.paymentMethod] += ticket.total;
+    });
+    
+    // Compile dry cleaning items
+    const dryCleaningMap = new Map<string, { quantity: number; sales: number }>();
+    
+    dailyTickets.forEach(ticket => {
+      if (ticket.dryCleaningItems && ticket.dryCleaningItems.length > 0) {
+        ticket.dryCleaningItems.forEach(item => {
+          const existing = dryCleaningMap.get(item.name);
+          if (existing) {
+            existing.quantity += item.quantity;
+            existing.sales += item.price * item.quantity;
+          } else {
+            dryCleaningMap.set(item.name, {
+              quantity: item.quantity,
+              sales: item.price * item.quantity
+            });
+          }
+        });
+      }
+    });
+    
+    const dryCleaningItems = Array.from(dryCleaningMap.entries()).map(([name, data]) => ({
+      name,
+      quantity: data.quantity,
+      sales: data.sales
+    }));
+    
+    return { totalValets, totalSales, paymentBreakdown, dryCleaningItems };
+  }
 };
 
 // Get weekly metrics (for the week containing the provided date)

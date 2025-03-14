@@ -9,16 +9,188 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      customers: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          phone: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          phone: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          phone?: string
+        }
+        Relationships: []
+      }
+      dry_cleaning_items: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          price: number
+          quantity: number
+          ticket_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          price: number
+          quantity?: number
+          ticket_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          price?: number
+          quantity?: number
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dry_cleaning_items_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expenses: {
+        Row: {
+          amount: number
+          created_at: string
+          date: string
+          description: string
+          id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          date?: string
+          description: string
+          id?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          date?: string
+          description?: string
+          id?: string
+        }
+        Relationships: []
+      }
+      ticket_laundry_options: {
+        Row: {
+          created_at: string
+          id: string
+          option_type: Database["public"]["Enums"]["laundry_option"]
+          ticket_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          option_type: Database["public"]["Enums"]["laundry_option"]
+          ticket_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          option_type?: Database["public"]["Enums"]["laundry_option"]
+          ticket_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ticket_laundry_options_ticket_id_fkey"
+            columns: ["ticket_id"]
+            isOneToOne: false
+            referencedRelation: "tickets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tickets: {
+        Row: {
+          created_at: string
+          customer_id: string
+          date: string
+          id: string
+          payment_method: Database["public"]["Enums"]["payment_method"]
+          ticket_number: string
+          total: number
+          updated_at: string
+          valet_quantity: number
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          date?: string
+          id?: string
+          payment_method?: Database["public"]["Enums"]["payment_method"]
+          ticket_number: string
+          total: number
+          updated_at?: string
+          valet_quantity?: number
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          date?: string
+          id?: string
+          payment_method?: Database["public"]["Enums"]["payment_method"]
+          ticket_number?: string
+          total?: number
+          updated_at?: string
+          valet_quantity?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tickets_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_metrics: {
+        Args: {
+          start_date: string
+          end_date: string
+        }
+        Returns: {
+          total_valets: number
+          total_sales: number
+          cash_payments: number
+          debit_payments: number
+          mercadopago_payments: number
+          cuentadni_payments: number
+        }[]
+      }
     }
     Enums: {
-      [_ in never]: never
+      laundry_option:
+        | "separateByColor"
+        | "delicateDry"
+        | "stainRemoval"
+        | "bleach"
+        | "noFragrance"
+        | "noDry"
+      payment_method: "cash" | "debit" | "mercadopago" | "cuentadni"
     }
     CompositeTypes: {
       [_ in never]: never

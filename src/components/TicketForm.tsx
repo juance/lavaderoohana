@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -38,6 +37,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { generateTicketNumber } from '@/utils/generateTicketNumber';
 
 interface LaundryOptions {
   separateByColor: boolean;
@@ -66,6 +66,7 @@ interface Customer {
   total: number;
   date: Date;
   dryCleaningItems?: DryCleaningItem[];
+  ticketNumber?: string;
 }
 
 const VALET_PRICE = 5000;
@@ -204,7 +205,7 @@ const TicketForm: React.FC = () => {
     setDryCleaningItems(prev => prev.filter(item => item.id !== id));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!name.trim()) {
@@ -217,25 +218,32 @@ const TicketForm: React.FC = () => {
       return;
     }
 
-    const currentDate = new Date();
-    const customerData: Customer = {
-      name,
-      phone,
-      valetQuantity,
-      laundryOptions,
-      paymentMethod,
-      total: calculateTotal(),
-      date: currentDate,
-      dryCleaningItems: dryCleaningItems.length > 0 ? dryCleaningItems : undefined
-    };
+    try {
+      const ticketNumber = generateTicketNumber();
+      const currentDate = new Date();
+      const customerData: Customer = {
+        name,
+        phone,
+        valetQuantity,
+        laundryOptions,
+        paymentMethod,
+        total: calculateTotal(),
+        date: currentDate,
+        dryCleaningItems: dryCleaningItems.length > 0 ? dryCleaningItems : undefined,
+        ticketNumber
+      };
 
-    setCustomer(customerData);
-    setShowTicket(true);
-    
-    // Store the customer data for metrics
-    storeTicketData(customerData);
-    
-    toast.success('¡Ticket generado con éxito!');
+      setCustomer(customerData);
+      setShowTicket(true);
+      
+      // Store the customer data in Supabase
+      await storeTicketData(customerData);
+      
+      toast.success('¡Ticket generado con éxito!');
+    } catch (error) {
+      console.error('Error storing ticket:', error);
+      toast.error('Hubo un problema al guardar el ticket. Por favor intente nuevamente.');
+    }
   };
 
   const newTicket = () => {

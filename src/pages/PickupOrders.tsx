@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 // Define payment method type
 type PaymentMethod = 'cash' | 'debit' | 'mercadopago' | 'cuentadni';
@@ -23,6 +24,7 @@ const PickupOrders: React.FC = () => {
   const [searchType, setSearchType] = useState<'ticketNumber' | 'name' | 'phone'>('ticketNumber');
   const [activeTab, setActiveTab] = useState<string>('orders');
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | null>(null);
+  const [loading, setLoading] = useState(true);
   
   // Check if user has permission to view orders
   if (!hasPermission('orders.view')) {
@@ -31,8 +33,20 @@ const PickupOrders: React.FC = () => {
   
   // Load tickets
   useEffect(() => {
-    const loadedTickets = getStoredTickets();
-    setTickets(loadedTickets);
+    const loadTickets = async () => {
+      setLoading(true);
+      try {
+        const loadedTickets = await getStoredTickets();
+        setTickets(loadedTickets);
+      } catch (error) {
+        console.error('Error loading tickets:', error);
+        toast.error('Error al cargar los tickets');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadTickets();
   }, []);
   
   // Reset payment method when a new ticket is selected
@@ -76,30 +90,42 @@ const PickupOrders: React.FC = () => {
     }).format(date);
   };
   
-  const handlePaymentMethodChange = (value: PaymentMethod) => {
+  const handlePaymentMethodChange = async (value: PaymentMethod) => {
     if (!selectedTicket) return;
     
     setSelectedPaymentMethod(value);
     
-    // Create a new array with the updated ticket
-    const updatedTickets = tickets.map(ticket => {
-      if (ticket === selectedTicket) {
-        return { ...ticket, paymentMethod: value };
-      }
-      return ticket;
-    });
-    
-    // Update the selectedTicket reference
-    const updatedSelectedTicket = updatedTickets.find(ticket => ticket.name === selectedTicket.name && ticket.phone === selectedTicket.phone);
-    
-    // Update state
-    setTickets(updatedTickets);
-    setSelectedTicket(updatedSelectedTicket);
-    
-    // Save to localStorage
-    localStorage.setItem('laundryTickets', JSON.stringify(updatedTickets));
-    
-    toast.success(`Método de pago actualizado a ${getPaymentMethodName(value)}`);
+    try {
+      // Update the ticket in Supabase
+      const { error } = await supabase
+        .from('tickets')
+        .update({ payment_method: value })
+        .eq('ticket_number', selectedTicket.ticketNumber);
+      
+      if (error) throw error;
+      
+      // Update the local state
+      const updatedTickets = tickets.map(ticket => {
+        if (ticket.ticketNumber === selectedTicket.ticketNumber) {
+          return { ...ticket, paymentMethod: value };
+        }
+        return ticket;
+      });
+      
+      setTickets(updatedTickets);
+      
+      // Update the selectedTicket reference
+      const updatedSelectedTicket = updatedTickets.find(
+        ticket => ticket.ticketNumber === selectedTicket.ticketNumber
+      );
+      
+      setSelectedTicket(updatedSelectedTicket);
+      
+      toast.success(`Método de pago actualizado a ${getPaymentMethodName(value)}`);
+    } catch (error) {
+      console.error('Error updating payment method:', error);
+      toast.error('Error al actualizar el método de pago');
+    }
   };
   
   const getPaymentMethodIcon = (method: PaymentMethod) => {
