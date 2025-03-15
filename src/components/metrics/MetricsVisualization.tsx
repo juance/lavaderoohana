@@ -14,7 +14,6 @@ import {
   Triangle
 } from 'lucide-react';
 import { Bar, Line } from 'react-chartjs-2';
-import { ChartContainer } from '@/components/ui/chart';
 
 type PaymentMethod = 'cash' | 'debit' | 'mercadopago' | 'cuentadni';
 
@@ -198,9 +197,9 @@ const MetricsVisualization: React.FC<MetricsVisualizationProps> = ({
           </CardTitle>
         </CardHeader>
         <CardContent className="p-4 pt-0">
-          <ChartContainer className="h-64 w-full">
+          <div className="h-64 w-full">
             <Line data={chartData} options={{ responsive: true, maintainAspectRatio: false }} />
-          </ChartContainer>
+          </div>
         </CardContent>
       </Card>
     );

@@ -11,6 +11,9 @@ import TicketSearch from '@/components/pickup/TicketSearch';
 import TicketList from '@/components/pickup/TicketList';
 import TicketDetails from '@/components/pickup/TicketDetails';
 import { PaymentMethod } from '@/components/pickup/PaymentSelector';
+import { shareTicketViaWhatsApp } from '@/utils/whatsAppSharing';
+import { Button } from '@/components/ui/button';
+import { Bell } from 'lucide-react';
 
 const PickupOrders: React.FC = () => {
   const [tickets, setTickets] = useState<any[]>([]);
@@ -122,6 +125,51 @@ const PickupOrders: React.FC = () => {
     }
   };
   
+  const notifyCustomer = () => {
+    if (!selectedTicket) {
+      toast.error('Debe seleccionar un ticket primero');
+      return;
+    }
+    
+    try {
+      // Format the date
+      const ticketDate = selectedTicket.date;
+      const formattedDate = ticketDate instanceof Date 
+        ? ticketDate.toLocaleDateString('es-AR')
+        : new Date(ticketDate).toLocaleDateString('es-AR');
+      
+      // Format items array
+      const items = [`${selectedTicket.valetQuantity} Valet: $ ${selectedTicket.valetQuantity * 5000}`];
+      
+      // Add dry cleaning items if any
+      if (selectedTicket.dryCleaningItems?.length) {
+        selectedTicket.dryCleaningItems.forEach((item: any) => {
+          items.push(`${item.name} x${item.quantity}: $ ${item.price * item.quantity}`);
+        });
+      }
+      
+      const paymentMethodName = getPaymentMethodName(selectedTicket.paymentMethod);
+      
+      shareTicketViaWhatsApp(
+        selectedTicket.phone,
+        {
+          customerName: selectedTicket.name,
+          customerPhone: selectedTicket.phone,
+          ticketNumber: selectedTicket.ticketNumber,
+          formattedDate,
+          items,
+          total: selectedTicket.total,
+          paymentMethod: paymentMethodName
+        }
+      );
+      
+      toast.success('Abriendo WhatsApp para notificar al cliente');
+    } catch (error) {
+      console.error('Error notifying customer:', error);
+      toast.error('Error al intentar notificar al cliente');
+    }
+  };
+  
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-blue-50 px-4 py-12">
       <div className="container max-w-5xl mx-auto">
@@ -134,7 +182,19 @@ const PickupOrders: React.FC = () => {
         </div>
         
         <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
-          <h2 className="text-2xl font-bold mb-6">Pedidos a Retirar</h2>
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-2xl font-bold">Pedidos a Retirar</h2>
+            
+            <Button 
+              onClick={notifyCustomer} 
+              variant="outline" 
+              className="gap-2"
+              disabled={!selectedTicket}
+            >
+              <Bell className="h-4 w-4" />
+              Avisar al cliente
+            </Button>
+          </div>
           
           <TicketSearch 
             searchTerm={searchTerm}

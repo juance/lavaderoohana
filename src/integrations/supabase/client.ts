@@ -17,6 +17,9 @@ export const formatDateForSupabase = (date: Date): string => {
 };
 
 // Helper function to parse a string date to a Date object
-export const parseSupabaseDate = (dateString: string): Date => {
+export const parseSupabaseDate = (dateString: string | Date): Date => {
+  if (dateString instanceof Date) {
+    return dateString;
+  }
   return new Date(dateString);
 };

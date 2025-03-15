@@ -211,11 +211,16 @@ const getStoredTicketsFromLocalStorage = async (): Promise<Customer[]> => {
   const ticketsJson = localStorage.getItem('laundryTickets');
   if (!ticketsJson) return [];
   
-  const tickets = JSON.parse(ticketsJson);
-  return tickets.map((ticket: any) => ({
-    ...ticket,
-    date: ticket.date ? parseSupabaseDate(ticket.date) : new Date() // Convert string back to Date
-  }));
+  try {
+    const tickets = JSON.parse(ticketsJson);
+    return tickets.map((ticket: any) => ({
+      ...ticket,
+      date: ticket.date ? parseSupabaseDate(ticket.date) : new Date() // Convert string back to Date
+    }));
+  } catch (error) {
+    console.error('Error parsing tickets from localStorage:', error);
+    return [];
+  }
 };
 
 // Store expense data
@@ -267,11 +272,16 @@ const getStoredExpensesFromLocalStorage = async (): Promise<Expense[]> => {
   const expensesJson = localStorage.getItem('laundryExpenses');
   if (!expensesJson) return [];
   
-  const expenses = JSON.parse(expensesJson);
-  return expenses.map((expense: any) => ({
-    ...expense,
-    date: expense.date ? parseSupabaseDate(expense.date) : new Date()
-  }));
+  try {
+    const expenses = JSON.parse(expensesJson);
+    return expenses.map((expense: any) => ({
+      ...expense,
+      date: expense.date ? parseSupabaseDate(expense.date) : new Date()
+    }));
+  } catch (error) {
+    console.error('Error parsing expenses from localStorage:', error);
+    return [];
+  }
 };
 
 // Get client visit frequency
@@ -545,7 +555,7 @@ export const getWeeklyMetrics = async (date: Date): Promise<{
       
       const dayData = dailyMap.get(dateKey);
       if (dayData) {
-        dayData.sales += parseFloat(ticket.total);
+        dayData.sales += parseFloat(ticket.total.toString());
         dayData.valets += ticket.valet_quantity;
       }
     });
@@ -559,11 +569,11 @@ export const getWeeklyMetrics = async (date: Date): Promise<{
           const existing = dryCleaningMap.get(item.name);
           if (existing) {
             existing.quantity += item.quantity;
-            existing.sales += parseFloat(item.price) * item.quantity;
+            existing.sales += parseFloat(item.price.toString()) * item.quantity;
           } else {
             dryCleaningMap.set(item.name, {
               quantity: item.quantity,
-              sales: parseFloat(item.price) * item.quantity
+              sales: parseFloat(item.price.toString()) * item.quantity
             });
           }
         });
@@ -751,7 +761,7 @@ export const getMonthlyMetrics = async (date: Date): Promise<{
         return ticketDate >= weekStart && ticketDate <= weekEnd;
       });
       
-      const weekSales = weekTickets.reduce((sum, ticket: any) => sum + parseFloat(ticket.total), 0);
+      const weekSales = weekTickets.reduce((sum, ticket: any) => sum + parseFloat(ticket.total.toString()), 0);
       const weekValets = weekTickets.reduce((sum, ticket: any) => sum + ticket.valet_quantity, 0);
       
       weeklyBreakdown.push({
@@ -770,11 +780,11 @@ export const getMonthlyMetrics = async (date: Date): Promise<{
           const existing = dryCleaningMap.get(item.name);
           if (existing) {
             existing.quantity += item.quantity;
-            existing.sales += parseFloat(item.price) * item.quantity;
+            existing.sales += parseFloat(item.price.toString()) * item.quantity;
           } else {
             dryCleaningMap.set(item.name, {
               quantity: item.quantity,
-              sales: parseFloat(item.price) * item.quantity
+              sales: parseFloat(item.price.toString()) * item.quantity
             });
           }
         });
