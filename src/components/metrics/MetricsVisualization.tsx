@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -14,19 +13,13 @@ import {
   Triangle
 } from 'lucide-react';
 import { Bar, Line } from 'react-chartjs-2';
+import { TimeFrame, PaymentMethod, DailyMetrics, WeeklyMetrics, MonthlyMetrics } from '@/utils/metricsTypes';
 
-type PaymentMethod = 'cash' | 'debit' | 'mercadopago' | 'cuentadni';
+type MetricsType = DailyMetrics | WeeklyMetrics | MonthlyMetrics;
 
 interface MetricsVisualizationProps {
-  timeFrame: 'daily' | 'weekly' | 'monthly';
-  metrics: {
-    totalValets: number;
-    totalSales: number;
-    paymentBreakdown: Record<PaymentMethod, number>;
-    dailyBreakdown?: { date: Date; sales: number; valets: number }[];
-    weeklyBreakdown?: { weekNumber: number; sales: number; valets: number }[];
-    dryCleaningItems?: { name: string; quantity: number; sales: number }[];
-  };
+  timeFrame: TimeFrame;
+  metrics: MetricsType;
   formatCurrency: (amount: number) => string;
 }
 
