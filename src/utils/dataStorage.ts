@@ -906,3 +906,4 @@ export const getMonthlyMetrics = async (date: Date): Promise<{
     }));
     
     return { totalValets, totalSales, paymentBreakdown, weeklyBreakdown, dryCleaning
+};
