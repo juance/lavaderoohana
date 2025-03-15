@@ -905,4 +905,4 @@ export const getMonthlyMetrics = async (date: Date): Promise<{
       sales: data.sales
     }));
     
-    return { totalValets, totalSales, paymentBreakdown, weeklyBreakdown, dryCleaning
+    return { totalValets, totalSales, paymentBreakdown, weeklyBreakdown
