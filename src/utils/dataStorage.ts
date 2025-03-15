@@ -1,4 +1,3 @@
-
 import { supabase, formatDateForSupabase, parseSupabaseDate } from '@/integrations/supabase/client';
 
 interface LaundryOptions {
@@ -906,6 +905,4 @@ export const getMonthlyMetrics = async (date: Date): Promise<{
       sales: data.sales
     }));
     
-    return { totalValets, totalSales, paymentBreakdown, weeklyBreakdown, dryCleaningItems };
-  }
-};
+    return { totalValets, totalSales, paymentBreakdown, weeklyBreakdown, dryCleaning
