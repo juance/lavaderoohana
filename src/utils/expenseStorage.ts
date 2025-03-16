@@ -15,7 +15,7 @@ export const storeExpenseData = async (expense: Expense): Promise<void> => {
   } catch (error) {
     console.error('Error storing expense data:', error);
     // Fallback to localStorage
-    const expenses = await getStoredExpensesFromLocalStorage();
+    const expenses = await getExpensesFromLocalStorage();
     expenses.push({
       ...expense
     });
@@ -41,12 +41,12 @@ export const getExpenses = async (): Promise<Expense[]> => {
   } catch (error) {
     console.error('Error fetching expenses from Supabase:', error);
     // Fallback to localStorage
-    return getStoredExpensesFromLocalStorage();
+    return getExpensesFromLocalStorage();
   }
 };
 
 // Helper function to get expenses from localStorage (fallback)
-export const getStoredExpensesFromLocalStorage = async (): Promise<Expense[]> => {
+export const getExpensesFromLocalStorage = async (): Promise<Expense[]> => {
   const expensesJson = localStorage.getItem('laundryExpenses');
   if (!expensesJson) return [];
   

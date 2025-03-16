@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { Coins, CreditCard, TrendingUp, PieChart, Users, Calendar } from 'lucide-react';
 import { getDailyMetrics, getWeeklyMetrics, getMonthlyMetrics } from '@/utils/dataStorage';
-import { getStoredExpenses } from '@/utils/expenseStorage';
+import { getExpenses } from '@/utils/expenseStorage';
 import { getTickets } from '@/utils/ticketStorage';
 import { TimeFrame, Expense } from '@/utils/metricsTypes';
 import MetricsCard from './MetricsCard';
@@ -71,7 +70,7 @@ const Dashboard: React.FC = () => {
     try {
       // Load tickets and expenses
       const allTickets = await getTickets();
-      const allExpenses = await getStoredExpenses();
+      const allExpenses = await getExpenses();
       
       // Load metrics based on timeframe
       let currentData;
@@ -422,7 +421,6 @@ const Dashboard: React.FC = () => {
       y: {
         beginAtZero: true,
         grid: {
-          borderDash: [2],
           color: 'rgba(0, 0, 0, 0.1)',
         }
       }
