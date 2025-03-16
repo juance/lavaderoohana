@@ -88,8 +88,7 @@ export const storeTicket = async (ticket: Customer): Promise<void> => {
     // Fallback to localStorage if Supabase fails
     const tickets = await getStoredTicketsFromLocalStorage();
     tickets.push({
-      ...ticket,
-      date: formatDateForSupabase(ticket.date) // Convert Date to string for storage
+      ...ticket
     });
     localStorage.setItem('laundryTickets', JSON.stringify(tickets));
   }

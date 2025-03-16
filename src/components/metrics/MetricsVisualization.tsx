@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
@@ -33,7 +34,7 @@ const MetricsVisualization: React.FC<MetricsVisualizationProps> = ({
     if (timeFrame === 'daily' || !metrics) {
       // For daily, we don't have a time-series chart
       return null;
-    } else if (timeFrame === 'weekly' && metrics.dailyBreakdown) {
+    } else if (timeFrame === 'weekly' && 'dailyBreakdown' in metrics) {
       const dailyData = metrics.dailyBreakdown;
       const labels = dailyData.map(day => 
         day.date.toLocaleDateString('es-AR', { weekday: 'short' })
@@ -56,7 +57,7 @@ const MetricsVisualization: React.FC<MetricsVisualizationProps> = ({
           }
         ]
       };
-    } else if (timeFrame === 'monthly' && metrics.weeklyBreakdown) {
+    } else if (timeFrame === 'monthly' && 'weeklyBreakdown' in metrics) {
       const weeklyData = metrics.weeklyBreakdown;
       const labels = weeklyData.map(week => `Semana ${week.weekNumber}`);
       

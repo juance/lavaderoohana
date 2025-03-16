@@ -17,8 +17,7 @@ export const storeExpenseData = async (expense: Expense): Promise<void> => {
     // Fallback to localStorage
     const expenses = await getStoredExpensesFromLocalStorage();
     expenses.push({
-      ...expense,
-      date: formatDateForSupabase(expense.date)
+      ...expense
     });
     localStorage.setItem('laundryExpenses', JSON.stringify(expenses));
   }
