@@ -14,26 +14,37 @@ const TimeFrameTabs: React.FC<TimeFrameTabsProps> = ({
   onTimeFrameChange 
 }) => {
   return (
-    <Tabs 
-      value={timeFrame} 
-      onValueChange={(value) => onTimeFrameChange(value as TimeFrame)} 
-      className="w-full"
-    >
-      <TabsList className="grid grid-cols-3">
-        <TabsTrigger value="daily" className="flex items-center gap-1">
-          <CalendarDays className="h-4 w-4" />
-          <span className="hidden sm:inline">Diario</span>
-        </TabsTrigger>
-        <TabsTrigger value="weekly" className="flex items-center gap-1">
-          <BarChart4 className="h-4 w-4" />
-          <span className="hidden sm:inline">Semanal</span>
-        </TabsTrigger>
-        <TabsTrigger value="monthly" className="flex items-center gap-1">
-          <LineChart className="h-4 w-4" />
-          <span className="hidden sm:inline">Mensual</span>
-        </TabsTrigger>
-      </TabsList>
-    </Tabs>
+    <div className="bg-slate-50 p-1 rounded-lg">
+      <Tabs 
+        value={timeFrame} 
+        onValueChange={(value) => onTimeFrameChange(value as TimeFrame)} 
+        className="w-full"
+      >
+        <TabsList className="grid grid-cols-3 bg-transparent">
+          <TabsTrigger 
+            value="daily" 
+            className={`flex items-center gap-1 ${timeFrame === 'daily' ? 'bg-white shadow-sm' : 'bg-transparent hover:bg-white/50'}`}
+          >
+            <CalendarDays className="h-4 w-4" />
+            <span className="hidden sm:inline">Daily</span>
+          </TabsTrigger>
+          <TabsTrigger 
+            value="weekly" 
+            className={`flex items-center gap-1 ${timeFrame === 'weekly' ? 'bg-white shadow-sm' : 'bg-transparent hover:bg-white/50'}`}
+          >
+            <BarChart4 className="h-4 w-4" />
+            <span className="hidden sm:inline">Weekly</span>
+          </TabsTrigger>
+          <TabsTrigger 
+            value="monthly" 
+            className={`flex items-center gap-1 ${timeFrame === 'monthly' ? 'bg-white shadow-sm' : 'bg-transparent hover:bg-white/50'}`}
+          >
+            <LineChart className="h-4 w-4" />
+            <span className="hidden sm:inline">Monthly</span>
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+    </div>
   );
 };
 

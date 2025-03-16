@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { CalendarIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CalendarIcon } from 'lucide-react';
 import { TimeFrame } from '@/utils/metricsTypes';
 
 interface DateNavigatorProps {
@@ -24,7 +24,7 @@ const DateNavigator: React.FC<DateNavigatorProps> = ({
     } else if (timeFrame === 'weekly') {
       const startOfWeek = new Date(selectedDate);
       startOfWeek.setDate(selectedDate.getDate() - selectedDate.getDay());
-      return `Semana del ${formatDate(startOfWeek)}`;
+      return `Week of ${formatDate(startOfWeek)}`;
     } else {
       return selectedDate.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
     }
@@ -46,24 +46,26 @@ const DateNavigator: React.FC<DateNavigatorProps> = ({
     <div className="flex justify-between items-center">
       <Button 
         variant="outline" 
-        size="sm" 
+        size="icon"
         onClick={() => handleDateChange(-1)}
+        className="h-8 w-8 rounded-full"
       >
-        Anterior
+        <ChevronLeft className="h-4 w-4" />
       </Button>
       
-      <div className="flex items-center gap-1 px-3 py-1.5 bg-laundry-50 rounded-md text-sm">
-        <CalendarIcon className="h-3.5 w-3.5 text-laundry-500" />
+      <div className="flex items-center gap-1 px-3 py-1.5 bg-slate-50 rounded-md text-sm font-medium text-slate-700">
+        <CalendarIcon className="h-3.5 w-3.5 text-slate-500" />
         {getFormattedDateDisplay()}
       </div>
       
       <Button 
         variant="outline" 
-        size="sm" 
+        size="icon"
         onClick={() => handleDateChange(1)}
         disabled={isNextButtonDisabled()}
+        className="h-8 w-8 rounded-full"
       >
-        Siguiente
+        <ChevronRight className="h-4 w-4" />
       </Button>
     </div>
   );
