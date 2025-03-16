@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,12 +7,7 @@ import { Separator } from '@/components/ui/separator';
 import { Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { storeExpense } from '@/utils/dataStorage';
-
-interface Expense {
-  description: string;
-  amount: number;
-  date: Date;
-}
+import { Expense } from '@/utils/metricsTypes';
 
 interface ExpensesCardProps {
   expenses: Expense[];

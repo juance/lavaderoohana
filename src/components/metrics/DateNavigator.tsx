@@ -2,8 +2,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { CalendarIcon } from 'lucide-react';
-
-type TimeFrame = 'daily' | 'weekly' | 'monthly';
+import { TimeFrame } from '@/utils/metricsTypes';
 
 interface DateNavigatorProps {
   timeFrame: TimeFrame;

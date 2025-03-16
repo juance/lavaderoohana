@@ -30,3 +30,31 @@ export interface WeeklyMetrics extends DailyMetrics {
 export interface MonthlyMetrics extends DailyMetrics {
   weeklyBreakdown: { weekNumber: number; sales: number; valets: number }[];
 }
+
+export interface LaundryOptions {
+  separateByColor: boolean;
+  delicateDry: boolean;
+  stainRemoval: boolean;
+  bleach: boolean;
+  noFragrance: boolean;
+  noDry: boolean;
+}
+
+export interface DryCleaningItem {
+  id: string;
+  name: string;
+  price: number;
+  quantity: number;
+}
+
+export interface Customer {
+  name: string;
+  phone: string;
+  valetQuantity: number;
+  laundryOptions: LaundryOptions;
+  paymentMethod: PaymentMethod;
+  total: number;
+  date: Date;
+  dryCleaningItems?: DryCleaningItem[];
+  ticketNumber?: string;
+}

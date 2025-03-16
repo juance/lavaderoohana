@@ -2,8 +2,7 @@
 import React from 'react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CalendarDays, BarChart4, LineChart } from 'lucide-react';
-
-type TimeFrame = 'daily' | 'weekly' | 'monthly';
+import { TimeFrame } from '@/utils/metricsTypes';
 
 interface TimeFrameTabsProps {
   timeFrame: TimeFrame;
